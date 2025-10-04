@@ -1,22 +1,24 @@
 import fastapi
-import schema
 from fastapi import Request
-from typing import List, Dict
-from typing import Any
+from typing import Dict
+import schema
+from tools import extract_boxes_from_image
 
 app = fastapi.FastAPI()
-
-
-@app.get("/")
-async def read_root(request: Request) -> Dict[str, str]:
-    return {"Hello": "World"}
 
 @app.get("/getimage")
 async def get_image(request: Request) -> Dict[str, str]:
     return {"image": "image_data"}
 
-@app.post("/star_analysis")
-async def star_analysis(data: schema.StarQuerySchema, request: Request) -> schema.StarResponseSchema:
-    # Perform analysis on the received data
-
-    return schema.StarResponseSchema(analysis="result")
+@app.post("/star_analysis", response_model=schema.StarResponseSchema)
+async def star_analysis(data: schema.StarQuerySchema, request: Request):
+    boxes = extract_boxes_from_image(data.image)
+    bounding_boxes = [
+        schema.BoundingBoxSchema(
+            center=(box["center_x"], box["center_y"]),
+            height=box["height"],
+            width=box["width"]
+        )
+        for box in boxes
+    ]
+    return schema.StarResponseSchema(bounding_box_list=bounding_boxes)
