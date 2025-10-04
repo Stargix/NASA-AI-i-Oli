@@ -103,15 +103,18 @@ export default function Toolbox({ onResult }: Props) {
       max_components: maxComponents,
     };
 
+    console.log('Toolbox: About to fetch /star_analysis', payload);
     const resp = await fetch('http://localhost:8000/star_analysis', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
+    console.log('Toolbox: Fetch to /star_analysis completed', resp);
 
     if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText}`);
 
     const data = await resp.json();
+    console.log('Toolbox: Response data from /star_analysis', data);
     return data;
   }, [mode, gaussianBlur, noiseThreshold, adaptativeFiltering, separationThreshold, minSize, maxComponents]);
 

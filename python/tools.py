@@ -5,13 +5,35 @@ from schema import BoundingBoxSchema
 import sqlite3, json, cv2
 from typing import List, Dict, Optional
 from no_nonsense_function import process_image, extract_properties_fast  
+import tempfile, os, base64, re
+try:
+    import requests
+except ImportError:
+    requests = None
+
+import numpy as np
 
 def extract_boxes_from_image(image_path, top_left=(0, 0), bottom_right=None, **kwargs):
     """
     Processes an image and returns a list of detected BoundingBoxSchema objects.
-    Processes an image and returns a list of detected BoundingBoxSchema objects.
+    Supports both local file paths and HTTP URLs.
     """
-    img = cv2.imread(image_path)
+    # Check if it's a URL
+    if isinstance(image_path, str) and (image_path.startswith('http://') or image_path.startswith('https://')):
+        try:
+            print(f"Downloading image from URL: {image_path}")
+            import requests
+            response = requests.get(image_path, timeout=10)
+            response.raise_for_status()
+            image_array = np.frombuffer(response.content, dtype=np.uint8)
+            img = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+            if img is None:
+                raise ValueError(f"Failed to decode image from URL")
+            print(f"Successfully loaded image from URL. Shape: {img.shape}")
+        except Exception as e:
+            raise ValueError(f"Could not download/load image from URL {image_path}: {str(e)}")
+    else:
+        img = cv2.imread(image_path)
     if img is None:
         raise ValueError(f"Could not load image: {image_path}")
 
@@ -22,16 +44,8 @@ def extract_boxes_from_image(image_path, top_left=(0, 0), bottom_right=None, **k
     x2, y2 = bottom_right
     cropped = img[y1:y2, x1:x2]
 
-    # Use the general detect_bounding_boxes function
-    objects = detect_bounding_boxes(cropped, **kwargs)
-    # Use the general detect_bounding_boxes function
     objects = detect_bounding_boxes(cropped, **kwargs)
     x_offset, y_offset = top_left
-
-    boxes = []
-    for obj in objects:
-        center_x = obj["centroid_x"] + x_offset
-        center_y = obj["centroid_y"] + y_offset
 
     boxes = []
     for obj in objects:
@@ -229,3 +243,38 @@ def ejecutar_sql(action_input: str) -> str:
         return json.dumps(res)
     except Exception as e:
         return json.dumps({"error": str(e), "sql": action_input})
+
+def save_temp_image_from_url(url: str) -> str:
+    if requests is None:
+        raise RuntimeError('requests library is required to download images from URLs')
+    try:
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 404 and '/tiles/' in url:
+            fallback_url = url.split('/tiles/')[0] + '/andromeda.jpg'
+            resp = requests.get(fallback_url, timeout=10)
+            resp.raise_for_status()
+        else:
+            raise
+    ext = os.path.splitext(url)[1] or '.jpg'
+    fd, tmp_path = tempfile.mkstemp(suffix=ext)
+    with os.fdopen(fd, 'wb') as f:
+        f.write(resp.content)
+    return tmp_path
+
+def save_temp_image_from_data_url(data_url: str) -> str:
+    m = re.match(r'data:(image/\w+);base64,(.*)', data_url, re.DOTALL)
+    if not m:
+        raise ValueError('Invalid data URL')
+    mime = m.group(1)
+    b64 = m.group(2)
+    ext = {
+        'image/jpeg': '.jpg',
+        'image/png': '.png',
+        'image/webp': '.webp'
+    }.get(mime, '.jpg')
+    fd, tmp_path = tempfile.mkstemp(suffix=ext)
+    with os.fdopen(fd, 'wb') as f:
+        f.write(base64.b64decode(b64))
+    return tmp_path
