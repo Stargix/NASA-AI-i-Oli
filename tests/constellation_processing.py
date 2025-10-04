@@ -72,10 +72,11 @@ def process_constellation_image(image_path: str) -> Tuple[np.ndarray, np.ndarray
     
     # Aplicar la máscara a la imagen original
     output_image_without_circles = cv2.bitwise_and(output_image, output_image, mask=mask_inv)
-    
-    # Aplicar apertura para limpiar y hacer líneas más uniformes
-    kernel_opening = np.ones((3, 3), np.uint8)
-    output_image_without_circles = cv2.morphologyEx(output_image_without_circles, cv2.MORPH_OPEN, kernel_opening, iterations=1)
+
+
+    # Engrosar las líneas usando dilatación
+    kernel_dilate = np.ones((8, 8), np.uint8)  # Puedes ajustar el tamaño para más grosor
+    output_image_without_circles = cv2.dilate(output_image_without_circles, kernel_dilate, iterations=1)
     
     return image_with_circles_small, output_image_without_circles
 
