@@ -127,13 +127,12 @@ export default function QueryBox({ onQuery, isLoading = false }: QueryBoxProps) 
                         disabled={(!query.trim() && attachedImages.length === 0) || isLoading}
                         className="
                             flex-shrink-0 p-2 rounded-full
-                            bg-cyan-500/20 border border-cyan-500/50
                             text-cyan-400
-                            hover:bg-cyan-500/30 hover:border-cyan-400
+                            hover:bg-cyan-500/20
                             hover:shadow-[0_0_15px_rgba(6,182,212,0.5)]
                             transition-all duration-300
                             disabled:opacity-30 disabled:cursor-not-allowed
-                            disabled:hover:bg-cyan-500/20 disabled:hover:border-cyan-500/50
+                            disabled:hover:bg-transparent
                             disabled:hover:shadow-none
                         "
                         title="Send query"
