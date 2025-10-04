@@ -1,13 +1,6 @@
 import cv2
-<<<<<<< HEAD
-<<<<<<< HEAD
 from star_detection_tools import detect_bounding_boxes
-=======
-from star_detection_tools import process_image
-=======
-from star_detection_tools import detect_bounding_boxes
->>>>>>> 425ba21 (star_detection)
->>>>>>> 0a4a1a5349d5b20e333f706d3825d1f8336cded0
+from star_detection_tools import process_image, detect_bounding_boxes
 from schema import BoundingBoxSchema
 import sqlite3, json, cv2
 from typing import List, Dict, Optional
@@ -20,7 +13,6 @@ def extract_boxes_from_image(image_path, top_left=(0, 0), bottom_right=None, **k
     """
     img = cv2.imread(image_path)
     if img is None:
-        raise ValueError(f"Could not load image: {image_path}")
         raise ValueError(f"Could not load image: {image_path}")
 
     if bottom_right is None:
