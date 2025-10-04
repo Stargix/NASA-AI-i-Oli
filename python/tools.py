@@ -1,8 +1,12 @@
 import cv2
 <<<<<<< HEAD
+<<<<<<< HEAD
 from star_detection_tools import detect_bounding_boxes
 =======
 from star_detection_tools import process_image
+=======
+from star_detection_tools import detect_bounding_boxes
+>>>>>>> 425ba21 (star_detection)
 >>>>>>> 0a4a1a5349d5b20e333f706d3825d1f8336cded0
 from schema import BoundingBoxSchema
 import sqlite3, json, cv2
@@ -12,9 +16,11 @@ from no_nonsense_function import process_image, extract_properties_fast
 def extract_boxes_from_image(image_path, top_left=(0, 0), bottom_right=None, **kwargs):
     """
     Processes an image and returns a list of detected BoundingBoxSchema objects.
+    Processes an image and returns a list of detected BoundingBoxSchema objects.
     """
     img = cv2.imread(image_path)
     if img is None:
+        raise ValueError(f"Could not load image: {image_path}")
         raise ValueError(f"Could not load image: {image_path}")
 
     if bottom_right is None:
@@ -26,7 +32,14 @@ def extract_boxes_from_image(image_path, top_left=(0, 0), bottom_right=None, **k
 
     # Use the general detect_bounding_boxes function
     objects = detect_bounding_boxes(cropped, **kwargs)
+    # Use the general detect_bounding_boxes function
+    objects = detect_bounding_boxes(cropped, **kwargs)
     x_offset, y_offset = top_left
+
+    boxes = []
+    for obj in objects:
+        center_x = obj["centroid_x"] + x_offset
+        center_y = obj["centroid_y"] + y_offset
 
     boxes = []
     for obj in objects:
@@ -39,10 +52,15 @@ def extract_boxes_from_image(image_path, top_left=(0, 0), bottom_right=None, **k
                 height=float(obj["bbox_height"]),
                 color=obj.get("color"),
                 obj_type=obj.get("obj_type")
+                width=float(obj["bbox_width"]),
+                height=float(obj["bbox_height"]),
+                color=obj.get("color"),
+                obj_type=obj.get("obj_type")
             )
         )
     return boxes
 
+<<<<<<< HEAD
 DB_PATH_DEFAULT = "space_objects.db"
 
 def create_space_objects_table(db_path: str = DB_PATH_DEFAULT):
@@ -224,3 +242,5 @@ def ejecutar_sql(action_input: str) -> str:
         return json.dumps(res)
     except Exception as e:
         return json.dumps({"error": str(e), "sql": action_input})
+=======
+>>>>>>> 425ba21 (star_detection)
