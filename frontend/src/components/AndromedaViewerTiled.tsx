@@ -174,6 +174,8 @@ export default function AndromedaViewerTiled() {
                     setIsZoomLoading(false);
                 }, 400);
             }
+            // Actualizar estado global del viewer para el Toolbox
+            updateViewerState();
         });
 
         // Throttle ligero de mousemove para mejor rendimiento
@@ -188,6 +190,30 @@ export default function AndromedaViewerTiled() {
                     y: Math.round(e.latlng.lat)
                 });
             }
+        });
+
+        // Función para actualizar el estado global del viewer
+        const updateViewerState = () => {
+            const center = map.getCenter();
+            (window as any).andromedaViewerState = {
+                zoom: map.getZoom(),
+                centerPx: {
+                    x: center.lng,
+                    y: center.lat
+                },
+                imageSize: {
+                    width: imageWidth,
+                    height: imageHeight
+                }
+            };
+        };
+
+        // Actualizar estado inicial
+        updateViewerState();
+        
+        // Actualizar estado en cada zoom
+        map.on('zoomend', () => {
+            updateViewerState();
         });
 
         mapRef.current = map;

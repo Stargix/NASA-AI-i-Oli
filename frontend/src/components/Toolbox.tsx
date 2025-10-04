@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 // Hola, buenas
 interface Props {
   onResult?: (data: any) => void;
@@ -16,10 +16,15 @@ export default function Toolbox({ onResult }: Props) {
   const [maxComponents, setMaxComponents] = useState(1000);
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<any>(null);
+  
+  // Estado para la detección automática en background
+  const [cachedResult, setCachedResult] = useState<any>(null);
+  const [isAutoDetecting, setIsAutoDetecting] = useState(false);
+  const lastViewerStateRef = useRef<string>('');
+  const autoDetectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const runDetection = async () => {
-    setRunning(true);
-    setResult(null);
+  // Función compartida para ejecutar la detección
+  const executeDetection = useCallback(async () => {
     // Determine image URL: if viewer state is available, compute tile URL from zoom/center
     const TILE_SIZE = 256;
     const MAX_ZOOM = 4; // must match scripts/generate-tiles.js
@@ -90,21 +95,99 @@ export default function Toolbox({ onResult }: Props) {
       max_components: maxComponents,
     };
 
+    const resp = await fetch('http://localhost:8000/star_analysis', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText}`);
+
+    const data = await resp.json();
+    return data;
+  }, [mode, gaussianBlur, noiseThreshold, adaptativeFiltering, separationThreshold, minSize, maxComponents]);
+
+  // Función para ejecutar detección automática en background (sin mostrar resultados)
+  const runAutoDetection = useCallback(async () => {
+    if (isAutoDetecting) return; // Evitar ejecuciones paralelas
+    
+    setIsAutoDetecting(true);
+    console.log('🔍 Auto-detection triggered (background)...');
+
     try {
-      const resp = await fetch('http://localhost:8000/star_analysis', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      const detectionResult = await executeDetection();
+      setCachedResult(detectionResult);
+      console.log('✅ Auto-detection completed and cached');
+    } catch (err) {
+      console.error('❌ Auto-detection error:', err);
+      setCachedResult({ error: String(err) });
+    } finally {
+      setIsAutoDetecting(false);
+    }
+  }, [isAutoDetecting, executeDetection]);
 
-      if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText}`);
+  // Hook para detectar cuando el usuario permanece en una zona por 3 segundos
+  useEffect(() => {
+    const checkViewerState = () => {
+      if (typeof window === 'undefined' || !(window as any).andromedaViewerState) {
+        return;
+      }
 
-      const data = await resp.json();
-      setResult(data);
-      onResult?.(data);
+      const currentState = (window as any).andromedaViewerState;
+      const stateKey = `${currentState.zoom}_${Math.round(currentState.centerPx.x)}_${Math.round(currentState.centerPx.y)}`;
+
+      // Si el estado es diferente, reiniciar el timer
+      if (stateKey !== lastViewerStateRef.current) {
+        lastViewerStateRef.current = stateKey;
+        
+        // Limpiar timer anterior
+        if (autoDetectionTimerRef.current) {
+          clearTimeout(autoDetectionTimerRef.current);
+        }
+
+        // Iniciar nuevo timer de 3 segundos
+        autoDetectionTimerRef.current = setTimeout(() => {
+          // Ejecutar detección automática en background
+          runAutoDetection();
+        }, 3000);
+      }
+    };
+
+    // Verificar cada 500ms si el estado del viewer ha cambiado
+    const interval = setInterval(checkViewerState, 500);
+
+    return () => {
+      clearInterval(interval);
+      if (autoDetectionTimerRef.current) {
+        clearTimeout(autoDetectionTimerRef.current);
+      }
+    };
+  }, [runAutoDetection]);
+
+  // Función para cuando el usuario pulsa el botón Run (muestra resultados)
+  const runDetection = async () => {
+    setRunning(true);
+    setResult(null);
+    
+    try {
+      // Si hay resultado cacheado y los parámetros no han cambiado, usar el cache
+      if (cachedResult && !cachedResult.error) {
+        console.log('📦 Using cached detection result');
+        setResult(cachedResult);
+        onResult?.(cachedResult);
+      } else {
+        // Si no hay cache o hubo error, ejecutar nueva detección
+        console.log('🔍 Running new detection...');
+        const data = await executeDetection();
+        setResult(data);
+        setCachedResult(data);
+        onResult?.(data);
+      }
     } catch (err) {
       console.error('Toolbox detection error:', err);
-      setResult({ error: String(err) });
+      const errorResult = { error: String(err) };
+      setResult(errorResult);
+      setCachedResult(errorResult);
     } finally {
       setRunning(false);
     }
@@ -152,11 +235,26 @@ export default function Toolbox({ onResult }: Props) {
       <div className="text-cyan-400/70 text-xs mb-2">Max components: {maxComponents}</div>
       <input disabled={mode === 'auto'} type="range" min={10} max={5000} step={10} value={maxComponents} onChange={(e) => setMaxComponents(Number(e.target.value))} className="w-full mb-3" />
 
+      {/* Indicador de estado de auto-detección */}
+      {isAutoDetecting && (
+        <div className="mb-3 p-2 bg-cyan-500/10 border border-cyan-500/30 rounded text-xs text-cyan-400/80 font-mono flex items-center gap-2">
+          <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
+          Auto-detecting in background...
+        </div>
+      )}
+
+      {cachedResult && !isAutoDetecting && !result && (
+        <div className="mb-3 p-2 bg-green-500/10 border border-green-500/30 rounded text-xs text-green-400/80 font-mono flex items-center gap-2">
+          <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+          Detection ready - Press RUN to view
+        </div>
+      )}
+
       <div className="flex gap-2">
         <button onClick={runDetection} disabled={running} className="flex-1 py-2 bg-cyan-500/20 border border-cyan-500/50 rounded text-cyan-400 font-mono hover:bg-cyan-500/30 transition">
           {running ? 'RUNNING...' : 'RUN'}
         </button>
-        <button onClick={() => { setResult(null); }} className="py-2 px-2 border border-cyan-500/20 rounded text-cyan-400 text-sm">CLR</button>
+        <button onClick={() => { setResult(null); setCachedResult(null); }} className="py-2 px-2 border border-cyan-500/20 rounded text-cyan-400 text-sm">CLR</button>
       </div>
 
       {result && (
