@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Dict
 import schema
-from tools import extract_boxes_from_image
+from tools import extract_boxes_from_image, save_temp_image_from_url, save_temp_image_from_data_url
 
 app = FastAPI()
 
@@ -20,12 +20,31 @@ async def get_image(request: Request) -> Dict[str, str]:
 
 @app.post("/star_analysis", response_model=schema.StarResponseSchema)
 async def star_analysis(data: schema.StarQuerySchema, request: Request):
+    # Detect image type and save to temp file if needed
+    image_path = data.image
+    tmp_path = None
+    if image_path.startswith("data:image"):
+        tmp_path = save_temp_image_from_data_url(image_path)
+        image_path = tmp_path
+    elif image_path.startswith("http://") or image_path.startswith("https://"):
+        tmp_path = save_temp_image_from_url(image_path)
+        image_path = tmp_path
+
     boxes = extract_boxes_from_image(
-        data.image,
+        image_path,
         top_left=data.top_left,
         bottom_right=data.bottom_right,
-        automated=True
+        automated=data.automated,
+        gaussian_blur=data.gaussian_blur,
+        noise_threshold=data.noise_threshold,
+        adaptative_filtering=data.adaptative_filtering,
+        separation_threshold=data.separation_threshold,
+        min_size=data.min_size,
+        max_components=data.max_components
     )
+    if tmp_path:
+        import os
+        os.unlink(tmp_path)
     return schema.StarResponseSchema(bounding_box_list=boxes)
 
 @app.post("/chat", response_model=schema.ChatResponseSchema)
