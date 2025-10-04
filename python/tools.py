@@ -44,10 +44,6 @@ def extract_boxes_from_image(image_path, top_left=(0, 0), bottom_right=None, **k
                 height=float(obj["bbox_height"]),
                 color=obj.get("color"),
                 obj_type=obj.get("obj_type")
-                width=float(obj["bbox_width"]),
-                height=float(obj["bbox_height"]),
-                color=obj.get("color"),
-                obj_type=obj.get("obj_type")
             )
         )
     return boxes
