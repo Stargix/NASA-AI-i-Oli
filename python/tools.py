@@ -1,10 +1,9 @@
 import cv2
-from star_detection_tools import detect_bounding_boxes
-from star_detection_tools import process_image, detect_bounding_boxes
+from miquel.star_detection_tools import process_image, extract_properties_fast, find_clusters
 from schema import BoundingBoxSchema
 import sqlite3, json, cv2
 from typing import List, Dict, Optional
-from no_nonsense_function import process_image, extract_properties_fast  
+# from no_nonsense_function import process_image, extract_properties_fast
 import tempfile, os, base64, re
 try:
     import requests
@@ -61,6 +60,50 @@ def extract_boxes_from_image(image_path, top_left=(0, 0), bottom_right=None, **k
             )
         )
     return boxes
+
+
+def detect_bounding_boxes(
+    image,
+    gaussian_blur=25,
+    noise_threshold=120,
+    adaptative_filtering=False,
+    separation_threshold=3,
+    min_size=20,
+    automated=False,
+    max_components=1000,
+    cluster_gaussian_blur=101,
+    min_cluster_size=5000,
+    detect_clusters=True
+):
+    """
+    Procesa la imagen y devuelve una lista de diccionarios con las bounding boxes detectadas,
+    compatibles con BoundingBoxSchema.
+    """
+    # Detecta estrellas y galaxias
+    large_mask, labels, stats = process_image(
+        image,
+        gaussian_blur=gaussian_blur,
+        noise_threshold=noise_threshold,
+        adaptative_filtering=adaptative_filtering,
+        separation_threshold=separation_threshold,
+        min_size=min_size,
+        automated=automated,
+        max_components=max_components,
+        show_steps=False
+    )
+    objects = extract_properties_fast(image, labels, stats, large_mask)
+    
+    # Opcionalmente, detecta clusters
+    if detect_clusters:
+        cluster_mask, cluster_labels, cluster_stats = find_clusters(
+            image, large_mask, labels, stats,
+            gaussian_blur=cluster_gaussian_blur,
+            min_cluster_size=min_cluster_size
+        )
+        clusters = extract_properties_fast(image, cluster_labels, cluster_stats, cluster_mask, cluster=True)
+        objects.extend(clusters)
+        
+    return objects
 
 DB_PATH_DEFAULT = "space_objects.db"
 
