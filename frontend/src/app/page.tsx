@@ -48,35 +48,29 @@ export default function Home() {
   };
 
   const handleQuery = async (query: string, attachedImages?: File[]) => {
-    console.log('Query received:', query);
-    console.log('Attached images:', attachedImages);
-    setIsQueryLoading(true);
+    let images: string[] = [];
+    if (attachedImages && attachedImages.length > 0) {
+      // Convert all attached images to base64 and add to the array
+      images = await Promise.all(
+        attachedImages.map(
+          file =>
+            new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsDataURL(file);
+            })
+        )
+      );
+    }
 
-    // TODO: Aquí irá la llamada a tu API
-    // Ejemplo con imágenes:
-    // try {
-    //   const formData = new FormData();
-    //   formData.append('query', query);
-    //   if (attachedImages) {
-    //     attachedImages.forEach((file, index) => {
-    //       formData.append(`image_${index}`, file);
-    //     });
-    //   }
-    //   
-    //   const response = await fetch('/api/query', {
-    //     method: 'POST',
-    //     body: formData
-    //   });
-    //   const data = await response.json();
-    //   console.log('API response:', data);
-    // } catch (error) {
-    //   console.error('Error calling API:', error);
-    // }
-
-    // Simulación de respuesta (remover cuando conectes con API real)
-    setTimeout(() => {
-      setIsQueryLoading(false);
-    }, 2000);
+    const response = await fetch('http://localhost:8000/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: query, images }),
+    });
+    const data = await response.json();
+    alert('Respuesta de la API: ' + data.response);
   };
 
   return (

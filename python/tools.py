@@ -1,15 +1,14 @@
 import cv2
-from no_nonsense_function import process_image
+from star_detection_tools import detect_bounding_boxes
 from schema import BoundingBoxSchema
 
-def extract_boxes_from_image(image_path, top_left=(0,0), bottom_right=None, **kwargs):
+def extract_boxes_from_image(image_path, top_left=(0, 0), bottom_right=None, **kwargs):
     """
-    Procesa una imagen y devuelve una lista de cajas detectadas.
-    Cada caja es un diccionario con: center_x, center_y, width, height.
+    Processes an image and returns a list of detected BoundingBoxSchema objects.
     """
     img = cv2.imread(image_path)
     if img is None:
-        raise ValueError(f"No se pudo cargar la imagen: {image_path}")
+        raise ValueError(f"Could not load image: {image_path}")
 
     if bottom_right is None:
         bottom_right = (img.shape[1], img.shape[0])
@@ -18,18 +17,22 @@ def extract_boxes_from_image(image_path, top_left=(0,0), bottom_right=None, **kw
     x2, y2 = bottom_right
     cropped = img[y1:y2, x1:x2]
 
-    large_mask, labels, stats = process_image(cropped, **kwargs)
-    boxes = []
+    # Use the general detect_bounding_boxes function
+    objects = detect_bounding_boxes(cropped, **kwargs)
     x_offset, y_offset = top_left
-    for i in range(1, stats.shape[0]):
-        x, y, w, h, area = stats[i]
-        center_x = x + w / 2 + x_offset
-        center_y = y + h / 2 + y_offset
+
+    boxes = []
+    for obj in objects:
+        center_x = obj["centroid_x"] + x_offset
+        center_y = obj["centroid_y"] + y_offset
         boxes.append(
             BoundingBoxSchema(
                 center=(float(center_x), float(center_y)),
-                width=int(w),
-                height=int(h)
+                width=float(obj["bbox_width"]),
+                height=float(obj["bbox_height"]),
+                color=obj.get("color"),
+                obj_type=obj.get("obj_type")
             )
         )
     return boxes
+
