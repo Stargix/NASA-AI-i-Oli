@@ -1,13 +1,14 @@
+# agent.py
 import os
 import json
 from typing import Optional, Dict
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.agents import create_react_agent, AgentExecutor
 from langchain.prompts import PromptTemplate
-from tools import ingestar_imagen, ejecutar_sql  
+from agent_tools import ingestar_imagen, ejecutar_sql  
 
 class Agent:
-    PROMPT = """Eres un agente NL a SQL especializado en analizar objetos espaciales en imágenes astronómicas.
+    PROMPT = """Eres un agente NL→SQL especializado en analizar objetos espaciales en imágenes astronómicas.
 
 Base de datos (tabla 'space_objects'):
 - id, image_path, centroid_x, centroid_y, area, peak_brightness, total_brightness,
@@ -32,6 +33,7 @@ REGLAS:
    - Usa 'o1.id < o2.id' para evitar duplicados
 7) Después de ejecutar la consulta SQL, devuelve EXACTAMENTE el JSON resultante como respuesta final.
 8) NO ejecutes consultas adicionales después de obtener el resultado solicitado.
+
 
 FORMATO ReAct:
 Question: {input}
@@ -90,21 +92,64 @@ Final Answer: <REPRODUCE EXACTAMENTE el JSON del último Observation>
             early_stopping_method="force",  
         )
 
+    def _enrich_objects(self, result: Dict) -> Dict:
+        """
+        Obtiene los detalles completos de los objetos encontrados en la consulta.
+        """
+        if not result or "rows" not in result:
+            return {}
+            
+        # Extraer todos los IDs únicos de los resultados
+        ids = set()
+        for row in result["rows"]:
+            # Buscar campos que contengan 'id'
+            for key, value in row.items():
+                if isinstance(value, (int, str)) and "id" in key.lower():
+                    ids.add(str(value))
+        
+        if not ids:
+            return {}
+            
+        # Consultar todos los detalles de estos objetos (excepto image_path)
+        details_query = f"""
+        SELECT id, centroid_x, centroid_y, area, compactness,
+               total_brightness, peak_brightness, color, background_contrast,
+               obj_type, bbox_x, bbox_y, bbox_width, bbox_height,
+               processing_timestamp
+        FROM space_objects
+        WHERE id IN ({','.join(ids)})
+        """
+        
+        details_res = json.loads(ejecutar_sql(details_query))
+        if "error" in details_res or "rows" not in details_res:
+            return {}
+            
+        # Devolver solo el mapa de id -> detalles completos
+        return {
+            str(row["id"]): row 
+            for row in details_res["rows"]
+        }
+
     def run_query(self, user_query: str, image_path: Optional[str] = None) -> Dict:
         """
-        Run a query through the agent.
+        Run a query through the agent and return full object details.
         
         Args:
             user_query (str): The query to process.
             image_path (Optional[str]): Optional path to an image to process.
             
         Returns:
-            Dict: The query results as a dictionary.
+            Dict: A dictionary mapping object IDs to their complete data.
         """
         if image_path:
             user_query = f"IMAGE_PATH: {image_path}\n{user_query}"
+        
+        # Ejecutar la query original
         res = self.executor.invoke({"input": user_query})
         try:
-            return json.loads(res["output"])
-        except Exception:
-            return {"raw_output": res.get("output", "")}
+            result = json.loads(res["output"])
+            # Devolver solo los detalles completos
+            return self._enrich_objects(result)
+        except Exception as e:
+            return {"error": str(e)}
+
