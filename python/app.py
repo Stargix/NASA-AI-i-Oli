@@ -12,7 +12,11 @@ async def get_image(request: Request) -> Dict[str, str]:
 
 @app.post("/star_analysis", response_model=schema.StarResponseSchema)
 async def star_analysis(data: schema.StarQuerySchema, request: Request):
-    boxes = extract_boxes_from_image(data.image)
+    boxes = extract_boxes_from_image(
+        data.image,
+        top_left=data.top_left,
+        bottom_right=data.bottom_right
+    )
     bounding_boxes = [
         schema.BoundingBoxSchema(
             center=(box["center_x"], box["center_y"]),
