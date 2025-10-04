@@ -5,6 +5,8 @@ import dynamic from 'next/dynamic';
 import ImageUploader, { TilesData } from '@/components/ImageUploader';
 import QueryBox from '@/components/QueryBox';
 import Toolbox from '@/components/Toolbox';
+import BoundingBoxOverlay from '@/components/BoundingBoxOverlay';
+
 
 // Importar los componentes de forma dinámica para evitar SSR issues
 const AndromedaViewer = dynamic(() => import('@/components/AndromedaViewerTiled'), {
@@ -34,6 +36,8 @@ export default function Home() {
   const [customImage, setCustomImage] = useState<TilesData | null>(null);
   const [isQueryLoading, setIsQueryLoading] = useState(false);
   const [detectionResult, setDetectionResult] = useState<any>(null);
+  const [showBoundingBoxes, setShowBoundingBoxes] = useState(false);
+
 
   const handleImageProcessed = (tilesData: TilesData) => {
     setCustomImage(tilesData);
@@ -51,6 +55,7 @@ export default function Home() {
 
   const handleDetectionResult = (result: any) => {
     setDetectionResult(result);
+    setShowBoundingBoxes(true);
     console.log('Detection result received:', result);
   };
 
@@ -131,6 +136,15 @@ export default function Home() {
         <ImageUploader
           onImageProcessed={handleImageProcessed}
           onCancel={() => setShowUploader(false)}
+        />
+      )}
+
+       {/* Bounding Box Overlay */}
+      {!customImage && detectionResult && detectionResult.bounding_box_list && (
+        <BoundingBoxOverlay
+          boxes={detectionResult.bounding_box_list}
+          visible={showBoundingBoxes}
+          onClose={() => setShowBoundingBoxes(false)}
         />
       )}
 
