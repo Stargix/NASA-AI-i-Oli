@@ -35,6 +35,10 @@ def process_image(image, gaussian_blur=25,
     foreground = cv2.subtract(gray_img, background)
     foreground = cv2.subtract(gray_img, foreground)
 
+    # Safety check: images with only very small stars can end up with a completely black foreground. If all values in foreground are smaller than noise_threshold, we skip the foreground step
+    if np.max(foreground) < noise_threshold:
+        foreground = gray_img.copy()
+
     if show_steps:
         cv2.imshow("Foreground", foreground)
         cv2.waitKey(1)
@@ -64,19 +68,32 @@ def process_image(image, gaussian_blur=25,
 
     # Do an erosion before eliminating small components to break up thin connections
     if automated:
+
+        # Safety check: is the smallest component area smaller than min_size?
+        # Get components:
+        n, labels, stats, _ = cv2.connectedComponentsWithStats(mask)
+        if n > 1 and np.min(stats[1:, cv2.CC_STAT_AREA]) < min_size:
+            min_size = 1
+
         separation_threshold = int(np.sqrt(min_size))
         if separation_threshold < 3:
             separation_threshold = 3
 
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (separation_threshold, separation_threshold))
-    mask = cv2.erode(mask, kernel, iterations=1)
+    if min_size > 1:
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (separation_threshold, separation_threshold))
+        mask = cv2.erode(mask, kernel, iterations=1)
+    else:
+        # Get the initial image and apply a binarization without even blurring
+        average_brightness = np.mean(gray_img[gray_img > 0])
+        bright_thresh = (average_brightness * 5)
+        _, mask = cv2.threshold(gray_img, bright_thresh, 255, cv2.THRESH_BINARY)
 
     # Get connected components, eliminate all smaller than min size
     n, labels, stats, _ = cv2.connectedComponentsWithStats(mask)
 
     # Let's select the min size depending on the biggest detected component
     if automated:
-        min_size = (max(stats[1:, cv2.CC_STAT_AREA])/1000) if n > 1 else 20
+        min_size = (max(stats[1:, cv2.CC_STAT_AREA])/1000) if n > 1 else 1
 
     # eliminate small components
     large_mask = np.zeros_like(mask)
@@ -317,7 +334,7 @@ def contextualize_dataset(objects, n_samples=500):
 if __name__ == "__main__":
     import time
 
-    small_path = "G:\\La meva unitat\\Universitat\\Projectes\\NASA\\space.jpg"
+    small_path = "C:\\Users\\mique\\Downloads\\NASA-AI-i-Oli\\python\\miquel\\test_images\\webb.jpg"
 
     OG_img = cv2.imread(small_path)
 
@@ -336,7 +353,7 @@ if __name__ == "__main__":
     # Large_mask is a binary mask with only the large components
     # Labels is an image where each pixel has the label of its component (0 is background)
     # Stats is an array where each row corresponds to a component and has [x, y, width, height, area]
-    large_mask, labels, stats = process_image(OG_img, automated=True)
+    large_mask, labels, stats = process_image(OG_img, automated=True, show_steps=True)
 
     process_time = time.time()
     times["Image processing"] = process_time - start_time
