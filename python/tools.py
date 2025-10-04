@@ -60,7 +60,6 @@ def extract_boxes_from_image(image_path, top_left=(0, 0), bottom_right=None, **k
         )
     return boxes
 
-<<<<<<< HEAD
 DB_PATH_DEFAULT = "space_objects.db"
 
 def create_space_objects_table(db_path: str = DB_PATH_DEFAULT):
@@ -242,5 +241,3 @@ def ejecutar_sql(action_input: str) -> str:
         return json.dumps(res)
     except Exception as e:
         return json.dumps({"error": str(e), "sql": action_input})
-=======
->>>>>>> 425ba21 (star_detection)
