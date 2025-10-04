@@ -4,6 +4,7 @@ import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import ImageUploader, { TilesData } from '@/components/ImageUploader';
 import QueryBox from '@/components/QueryBox';
+import Toolbox from '@/components/Toolbox';
 
 // Importar los componentes de forma dinámica para evitar SSR issues
 const AndromedaViewer = dynamic(() => import('@/components/AndromedaViewerTiled'), {
@@ -32,6 +33,7 @@ export default function Home() {
   const [showUploader, setShowUploader] = useState(false);
   const [customImage, setCustomImage] = useState<TilesData | null>(null);
   const [isQueryLoading, setIsQueryLoading] = useState(false);
+  const [detectionResult, setDetectionResult] = useState<any>(null);
 
   const handleImageProcessed = (tilesData: TilesData) => {
     setCustomImage(tilesData);
@@ -45,6 +47,11 @@ export default function Home() {
 
   const handleLoadNewImage = () => {
     setShowUploader(true);
+  };
+
+  const handleDetectionResult = (result: any) => {
+    setDetectionResult(result);
+    console.log('Detection result received:', result);
   };
 
   const handleQuery = async (query: string, attachedImages?: File[]) => {
@@ -118,6 +125,9 @@ export default function Home() {
       ) : (
         <AndromedaViewer />
       )}
+
+      {/* Toolbox para detección de estrellas */}
+      {!customImage && <Toolbox onResult={handleDetectionResult} />}
 
       {/* Uploader modal */}
       {showUploader && (
