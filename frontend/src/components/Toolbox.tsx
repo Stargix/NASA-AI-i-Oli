@@ -20,7 +20,9 @@ export default function Toolbox({ onResult }: Props) {
   // Estado para la detección automática en background
   const [cachedResult, setCachedResult] = useState<any>(null);
   const [isAutoDetecting, setIsAutoDetecting] = useState(false);
+  const [tilesLoaded, setTilesLoaded] = useState(false);
   const lastViewerStateRef = useRef<string>('');
+  const lastTilesLoadedRef = useRef<boolean>(false);
   const autoDetectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Función compartida para ejecutar la detección
@@ -144,20 +146,38 @@ export default function Toolbox({ onResult }: Props) {
       const currentState = (window as any).andromedaViewerState;
       const stateKey = `${currentState.zoom}_${Math.round(currentState.centerPx.x)}_${Math.round(currentState.centerPx.y)}`;
 
-      // Si el estado es diferente, reiniciar el timer
-      if (stateKey !== lastViewerStateRef.current) {
+      // Verificar si los tiles están cargados
+      const tilesAreLoaded = currentState.tilesLoaded === true;
+      setTilesLoaded(tilesAreLoaded);
+
+      // Detectar si el estado cambió O si los tiles acaban de terminar de cargar
+      const stateChanged = stateKey !== lastViewerStateRef.current;
+      const tilesJustLoaded = !lastTilesLoadedRef.current && tilesAreLoaded;
+
+      // Si el estado es diferente O los tiles acaban de cargar, reiniciar el timer
+      if (stateChanged || tilesJustLoaded) {
         lastViewerStateRef.current = stateKey;
+        lastTilesLoadedRef.current = tilesAreLoaded;
         
         // Limpiar timer anterior
         if (autoDetectionTimerRef.current) {
           clearTimeout(autoDetectionTimerRef.current);
         }
 
-        // Iniciar nuevo timer de 3 segundos
-        autoDetectionTimerRef.current = setTimeout(() => {
-          // Ejecutar detección automática en background
-          runAutoDetection();
-        }, 3000);
+        // Solo iniciar timer si los tiles están completamente cargados
+        if (tilesAreLoaded) {
+          // Iniciar nuevo timer de 3 segundos
+          autoDetectionTimerRef.current = setTimeout(() => {
+            // Ejecutar detección automática en background
+            runAutoDetection();
+          }, 3000);
+          
+          if (tilesJustLoaded) {
+            console.log('✅ Tiles loaded! Starting auto-detection timer...');
+          }
+        } else {
+          console.log('⏳ Waiting for tiles to load before auto-detection...');
+        }
       }
     };
 
@@ -244,6 +264,13 @@ export default function Toolbox({ onResult }: Props) {
       <input disabled={mode === 'auto'} type="range" min={10} max={5000} step={10} value={maxComponents} onChange={(e) => setMaxComponents(Number(e.target.value))} className="w-full mb-3" />
 
       {/* Indicador de estado de auto-detección */}
+      {!tilesLoaded && (
+        <div className="mb-3 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded text-xs text-yellow-400/80 font-mono flex items-center gap-2">
+          <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+          Loading tiles...
+        </div>
+      )}
+
       {isAutoDetecting && (
         <div className="mb-3 p-2 bg-cyan-500/10 border border-cyan-500/30 rounded text-xs text-cyan-400/80 font-mono flex items-center gap-2">
           <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
