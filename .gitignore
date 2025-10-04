@@ -205,3 +205,32 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Image files and tiles (large files)
+# Exclude image tiles in frontend
+frontend/public/tiles/
+frontend/public/*.jpg
+frontend/public/*.png
+frontend/public/*.jpeg
+
+# Exclude image tiles in embiggen
+embiggen/public/tiles/
+embiggen/public/*.jpg
+embiggen/public/*.png
+embiggen/public/*.jpeg
+
+# Exclude any Zone.Identifier files (Windows)
+*.jpg:Zone.Identifier
+*.png:Zone.Identifier
+*.jpeg:Zone.Identifier
+
+# Node modules
+node_modules/
+frontend/node_modules/
+embiggen/node_modules/
+
+# Next.js
+frontend/.next/
+frontend/out/
+embiggen/.next/
+embiggen/out/
