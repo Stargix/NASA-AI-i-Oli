@@ -317,16 +317,6 @@ export default function AndromedaViewerTiled() {
                 <div className="absolute bottom-16 right-0 w-12 h-12 border-r-2 border-b-2 border-cyan-500/30"></div>
             </div>
 
-            {/* Instrucciones */}
-            <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 z-[1000] bg-black/80 backdrop-blur-md border border-cyan-500/30 rounded-lg px-6 py-3 font-mono text-xs text-cyan-400/80 shadow-[0_0_20px_rgba(6,182,212,0.2)]">
-                <span className="inline-block mr-2 animate-pulse">◆</span>
-                <span>Drag to pan</span>
-                <span className="mx-2">•</span>
-                <span>Scroll to zoom</span>
-                <span className="mx-2">•</span>
-                <span>Click controls for precision</span>
-            </div>
-
             {/* Indicador de carga */}
             {loading && (
                 <div className="absolute inset-0 z-[2000] bg-black flex items-center justify-center">

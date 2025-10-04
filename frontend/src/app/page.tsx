@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import ImageUploader, { TilesData } from '@/components/ImageUploader';
+import QueryBox from '@/components/QueryBox';
 
 // Importar los componentes de forma dinámica para evitar SSR issues
 const AndromedaViewer = dynamic(() => import('@/components/AndromedaViewerTiled'), {
@@ -30,6 +31,7 @@ const DynamicImageViewer = dynamic(() => import('@/components/DynamicImageViewer
 export default function Home() {
   const [showUploader, setShowUploader] = useState(false);
   const [customImage, setCustomImage] = useState<TilesData | null>(null);
+  const [isQueryLoading, setIsQueryLoading] = useState(false);
 
   const handleImageProcessed = (tilesData: TilesData) => {
     setCustomImage(tilesData);
@@ -43,6 +45,38 @@ export default function Home() {
 
   const handleLoadNewImage = () => {
     setShowUploader(true);
+  };
+
+  const handleQuery = async (query: string, attachedImages?: File[]) => {
+    console.log('Query received:', query);
+    console.log('Attached images:', attachedImages);
+    setIsQueryLoading(true);
+
+    // TODO: Aquí irá la llamada a tu API
+    // Ejemplo con imágenes:
+    // try {
+    //   const formData = new FormData();
+    //   formData.append('query', query);
+    //   if (attachedImages) {
+    //     attachedImages.forEach((file, index) => {
+    //       formData.append(`image_${index}`, file);
+    //     });
+    //   }
+    //   
+    //   const response = await fetch('/api/query', {
+    //     method: 'POST',
+    //     body: formData
+    //   });
+    //   const data = await response.json();
+    //   console.log('API response:', data);
+    // } catch (error) {
+    //   console.error('Error calling API:', error);
+    // }
+
+    // Simulación de respuesta (remover cuando conectes con API real)
+    setTimeout(() => {
+      setIsQueryLoading(false);
+    }, 2000);
   };
 
   return (
@@ -98,6 +132,11 @@ export default function Home() {
           onCancel={() => setShowUploader(false)}
         />
       )}
+
+      {/* Query Box */}
+      <div className="absolute bottom-20 left-4 right-4 z-[1000]">
+        <QueryBox onQuery={handleQuery} isLoading={isQueryLoading} />
+      </div>
 
       {/* Footer cyber */}
       <div className="absolute bottom-4 left-4 right-4 z-[1000] flex items-center justify-between">

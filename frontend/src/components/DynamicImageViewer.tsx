@@ -320,15 +320,7 @@ export default function DynamicImageViewer({ tilesData, onReset }: DynamicViewer
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
                     </svg>
                 </button>
-                <button
-                    onClick={onReset}
-                    className="bg-black/80 backdrop-blur-md border border-red-500/30 rounded p-3 text-red-400 hover:bg-red-500/20 transition-all duration-300 hover:border-red-400 hover:shadow-[0_0_15px_rgba(220,38,38,0.5)]"
-                    title="Load New Image"
-                >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                    </svg>
-                </button>
+
             </div>
 
             {/* Grid overlay */}
@@ -350,16 +342,6 @@ export default function DynamicImageViewer({ tilesData, onReset }: DynamicViewer
                 <div className="absolute top-20 right-0 w-12 h-12 border-r-2 border-t-2 border-cyan-500/30"></div>
                 <div className="absolute bottom-16 left-0 w-12 h-12 border-l-2 border-b-2 border-cyan-500/30"></div>
                 <div className="absolute bottom-16 right-0 w-12 h-12 border-r-2 border-b-2 border-cyan-500/30"></div>
-            </div>
-
-            {/* Instrucciones */}
-            <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 z-[1000] bg-black/80 backdrop-blur-md border border-cyan-500/30 rounded-lg px-6 py-3 font-mono text-xs text-cyan-400/80 shadow-[0_0_20px_rgba(6,182,212,0.2)]">
-                <span className="inline-block mr-2 animate-pulse">◆</span>
-                <span>Drag to pan</span>
-                <span className="mx-2">•</span>
-                <span>Scroll to zoom</span>
-                <span className="mx-2">•</span>
-                <span>Custom Image Loaded</span>
             </div>
 
             {/* Indicador de carga inicial */}
