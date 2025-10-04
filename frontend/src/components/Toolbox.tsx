@@ -49,33 +49,41 @@ export default function Toolbox({ onResult }: Props) {
         const cx = st.centerPx.x; // x in image pixels
         const cy = st.centerPx.y; // y in image pixels
 
-        const tileX = Math.floor((cx * scaleFactor) / TILE_SIZE);
-        const tileY = Math.floor((cy * scaleFactor) / TILE_SIZE);
+        // Calculate tile coordinates
+        let tileX = Math.floor((cx * scaleFactor) / TILE_SIZE);
+        let tileY = Math.floor((cy * scaleFactor) / TILE_SIZE);
 
-        // Calculate the max tiles at this zoom level based on actual image dimensions
-        const scaledWidth = Math.round(imageW * scaleFactor);
-        const scaledHeight = Math.round(imageH * scaleFactor);
-        const maxTilesX = Math.ceil(scaledWidth / TILE_SIZE);
-        const maxTilesY = Math.ceil(scaledHeight / TILE_SIZE);
+        // Define actual tile grid limits for each zoom level based on existing files
+        // tiles/z/y/x.jpg structure
+        const tileGridLimits: Record<number, { maxY: number; maxX: number }> = {
+          0: { maxY: 0, maxX: 0 },  // 1x1: tiles/0/0/0.jpg
+          1: { maxY: 0, maxX: 0 },  // 1x1: tiles/1/0/0.jpg
+          2: { maxY: 1, maxX: 1 },  // 2x2: tiles/2/0-1/0-1.jpg
+          3: { maxY: 2, maxX: 3 },  // 3x4: tiles/3/0-2/0-3.jpg
+          4: { maxY: 5, maxX: 7 },  // 6x8: tiles/4/0-5/0-7.jpg
+        };
         
-        // Clamp tile coordinates to valid range
-        const clampedTileX = Math.max(0, Math.min(maxTilesX - 1, tileX));
-        const clampedTileY = Math.max(0, Math.min(maxTilesY - 1, tileY));
+        const limits = tileGridLimits[zIndex] || { maxY: 0, maxX: 0 };
+        
+        // Clamp tile coordinates to valid range (tiles are 0-indexed)
+        const clampedTileX = Math.max(0, Math.min(limits.maxX, tileX));
+        const clampedTileY = Math.max(0, Math.min(limits.maxY, tileY));
 
+        // Build tile URL - format: tiles/z/y/x.jpg
         imageUrl = `${window.location.origin}/tiles/${zIndex}/${clampedTileY}/${clampedTileX}.jpg`;
         
         console.log('Toolbox: viewerState=', st);
         console.log('Toolbox: computed tile', { 
           zIndex, 
           scaleFactor,
-          scaledSize: { width: scaledWidth, height: scaledHeight },
           centerPx: { x: cx, y: cy },
           tileX, 
           tileY, 
           clampedTileX,
           clampedTileY,
-          maxTiles: { x: maxTilesX, y: maxTilesY },
-          imageUrl 
+          limits: { maxX: limits.maxX, maxY: limits.maxY },
+          imageUrl,
+          tileExists: `Check: tiles/${zIndex}/${clampedTileY}/${clampedTileX}.jpg`
         });  
 
       } catch (e) {
