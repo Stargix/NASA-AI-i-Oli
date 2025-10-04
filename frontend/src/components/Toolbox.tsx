@@ -262,7 +262,7 @@ export default function Toolbox({ onResult }: Props) {
               }}
             >
               {/* Área de estado - siempre en DOM para permitir transiciones */}
-              <div 
+              <div
                 className="overflow-hidden transition-all duration-300 ease-in-out"
                 style={{
                   maxHeight: (isAutoDetecting || cachedResult || result) ? '100px' : '0px',
