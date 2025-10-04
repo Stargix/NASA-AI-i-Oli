@@ -1,7 +1,8 @@
 import cv2
 from no_nonsense_function import process_image
+from schema import BoundingBoxSchema
 
-def extract_boxes_from_image(image_path, top_left, bottom_right, **kwargs):
+def extract_boxes_from_image(image_path, top_left=(0,0), bottom_right=None, **kwargs):
     """
     Procesa una imagen y devuelve una lista de cajas detectadas.
     Cada caja es un diccionario con: center_x, center_y, width, height.
@@ -9,6 +10,9 @@ def extract_boxes_from_image(image_path, top_left, bottom_right, **kwargs):
     img = cv2.imread(image_path)
     if img is None:
         raise ValueError(f"No se pudo cargar la imagen: {image_path}")
+
+    if bottom_right is None:
+        bottom_right = (img.shape[1], img.shape[0])
 
     x1, y1 = top_left
     x2, y2 = bottom_right
@@ -21,10 +25,11 @@ def extract_boxes_from_image(image_path, top_left, bottom_right, **kwargs):
         x, y, w, h, area = stats[i]
         center_x = x + w / 2 + x_offset
         center_y = y + h / 2 + y_offset
-        boxes.append({
-            "center_x": float(center_x),
-            "center_y": float(center_y),
-            "width": int(w),
-            "height": int(h)
-        })
+        boxes.append(
+            BoundingBoxSchema(
+                center=(float(center_x), float(center_y)),
+                width=int(w),
+                height=int(h)
+            )
+        )
     return boxes

@@ -15,14 +15,7 @@ async def star_analysis(data: schema.StarQuerySchema, request: Request):
     boxes = extract_boxes_from_image(
         data.image,
         top_left=data.top_left,
-        bottom_right=data.bottom_right
+        bottom_right=data.bottom_right,
+        automated=True
     )
-    bounding_boxes = [
-        schema.BoundingBoxSchema(
-            center=(box["center_x"], box["center_y"]),
-            height=box["height"],
-            width=box["width"]
-        )
-        for box in boxes
-    ]
-    return schema.StarResponseSchema(bounding_box_list=bounding_boxes)
+    return schema.StarResponseSchema(bounding_box_list=boxes)
