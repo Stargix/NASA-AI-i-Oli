@@ -20,9 +20,7 @@ export default function Toolbox({ onResult }: Props) {
   // Estado para la detección automática en background
   const [cachedResult, setCachedResult] = useState<any>(null);
   const [isAutoDetecting, setIsAutoDetecting] = useState(false);
-  const [tilesLoaded, setTilesLoaded] = useState(false);
   const lastViewerStateRef = useRef<string>('');
-  const lastTilesLoadedRef = useRef<boolean>(false);
   const autoDetectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Función compartida para ejecutar la detección
@@ -149,38 +147,20 @@ export default function Toolbox({ onResult }: Props) {
       const currentState = (window as any).andromedaViewerState;
       const stateKey = `${currentState.zoom}_${Math.round(currentState.centerPx.x)}_${Math.round(currentState.centerPx.y)}`;
 
-      // Verificar si los tiles están cargados
-      const tilesAreLoaded = currentState.tilesLoaded === true;
-      setTilesLoaded(tilesAreLoaded);
-
-      // Detectar si el estado cambió O si los tiles acaban de terminar de cargar
-      const stateChanged = stateKey !== lastViewerStateRef.current;
-      const tilesJustLoaded = !lastTilesLoadedRef.current && tilesAreLoaded;
-
-      // Si el estado es diferente O los tiles acaban de cargar, reiniciar el timer
-      if (stateChanged || tilesJustLoaded) {
+      // Si el estado es diferente, reiniciar el timer
+      if (stateKey !== lastViewerStateRef.current) {
         lastViewerStateRef.current = stateKey;
-        lastTilesLoadedRef.current = tilesAreLoaded;
         
         // Limpiar timer anterior
         if (autoDetectionTimerRef.current) {
           clearTimeout(autoDetectionTimerRef.current);
         }
 
-        // Solo iniciar timer si los tiles están completamente cargados
-        if (tilesAreLoaded) {
-          // Iniciar nuevo timer de 3 segundos
-          autoDetectionTimerRef.current = setTimeout(() => {
-            // Ejecutar detección automática en background
-            runAutoDetection();
-          }, 3000);
-          
-          if (tilesJustLoaded) {
-            console.log('✅ Tiles loaded! Starting auto-detection timer...');
-          }
-        } else {
-          console.log('⏳ Waiting for tiles to load before auto-detection...');
-        }
+        // Iniciar nuevo timer de 3 segundos
+        autoDetectionTimerRef.current = setTimeout(() => {
+          // Ejecutar detección automática en background
+          runAutoDetection();
+        }, 3000);
       }
     };
 
@@ -225,82 +205,73 @@ export default function Toolbox({ onResult }: Props) {
   };
 
   return (
-    <div className="absolute top-28 left-4 z-[1100] w-80 bg-black/90 border border-cyan-500/30 rounded-lg p-4 shadow-[0_0_20px_rgba(6,182,212,0.2)]">
-      <div className="flex items-center justify-between mb-3">
-        <div className="text-cyan-400 font-mono font-bold">DETECTION TOOLBOX</div>
-        <div className="text-xs text-cyan-400/60">Mode</div>
+    <div className="absolute top-[170px] left-4 z-[1100] w-64 bg-black/90 border border-cyan-500/30 rounded-lg p-3 shadow-[0_0_20px_rgba(6,182,212,0.2)]">
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-cyan-400 font-mono font-bold text-sm">DETECTION</div>
+        <div className="flex gap-1">
+          <button
+            className={`px-2 py-1 rounded text-xs font-mono ${mode === 'auto' ? 'bg-cyan-500/20 border border-cyan-500/50' : 'bg-black/20 border border-cyan-500/20'}`}
+            onClick={() => setMode('auto')}
+          >
+            AUTO
+          </button>
+          <button
+            className={`px-2 py-1 rounded text-xs font-mono ${mode === 'manual' ? 'bg-cyan-500/20 border border-cyan-500/50' : 'bg-black/20 border border-cyan-500/20'}`}
+            onClick={() => setMode('manual')}
+          >
+            MAN
+          </button>
+        </div>
       </div>
 
-      <div className="flex gap-2 mb-3">
-        <button
-          className={`flex-1 py-2 rounded text-sm font-mono ${mode === 'auto' ? 'bg-cyan-500/20 border border-cyan-500/50' : 'bg-black/20 border border-cyan-500/20'}`}
-          onClick={() => setMode('auto')}
-        >
-          AUTO
-        </button>
-        <button
-          className={`flex-1 py-2 rounded text-sm font-mono ${mode === 'manual' ? 'bg-cyan-500/20 border border-cyan-500/50' : 'bg-black/20 border border-cyan-500/20'}`}
-          onClick={() => setMode('manual')}
-        >
-          MANUAL
-        </button>
+      <div className="text-cyan-400/70 text-[10px] mb-1">Gaussian: {gaussianBlur}</div>
+      <input disabled={mode === 'auto'} type="range" min={1} max={101} step={2} value={gaussianBlur} onChange={(e) => setGaussianBlur(Number(e.target.value))} className="w-full mb-2 h-1" />
+
+      <div className="text-cyan-400/70 text-[10px] mb-1">Noise: {noiseThreshold}</div>
+      <input disabled={mode === 'auto'} type="range" min={10} max={255} step={1} value={noiseThreshold} onChange={(e) => setNoiseThreshold(Number(e.target.value))} className="w-full mb-2 h-1" />
+
+      <div className="flex items-center justify-between mb-2 text-cyan-400/70 text-[10px]">
+        <label>Adaptive</label>
+        <input disabled={mode === 'auto'} type="checkbox" checked={adaptativeFiltering} onChange={(e) => setAdaptativeFiltering(e.target.checked)} className="w-3 h-3" />
       </div>
 
-      <div className="text-cyan-400/70 text-xs mb-2">Gaussian blur: {gaussianBlur}</div>
-      <input disabled={mode === 'auto'} type="range" min={1} max={101} step={2} value={gaussianBlur} onChange={(e) => setGaussianBlur(Number(e.target.value))} className="w-full mb-3" />
+      <div className="text-cyan-400/70 text-[10px] mb-1">Separation: {separationThreshold}</div>
+      <input disabled={mode === 'auto'} type="range" min={1} max={15} step={1} value={separationThreshold} onChange={(e) => setSeparationThreshold(Number(e.target.value))} className="w-full mb-2 h-1" />
 
-      <div className="text-cyan-400/70 text-xs mb-2">Noise threshold: {noiseThreshold}</div>
-      <input disabled={mode === 'auto'} type="range" min={10} max={255} step={1} value={noiseThreshold} onChange={(e) => setNoiseThreshold(Number(e.target.value))} className="w-full mb-3" />
+      <div className="text-cyan-400/70 text-[10px] mb-1">Min size: {minSize}</div>
+      <input disabled={mode === 'auto'} type="range" min={1} max={2000} step={1} value={minSize} onChange={(e) => setMinSize(Number(e.target.value))} className="w-full mb-2 h-1" />
 
-      <div className="flex items-center justify-between mb-3 text-cyan-400/70 text-xs">
-        <label className="flex items-center gap-2">Adaptive</label>
-        <input disabled={mode === 'auto'} type="checkbox" checked={adaptativeFiltering} onChange={(e) => setAdaptativeFiltering(e.target.checked)} />
-      </div>
-
-      <div className="text-cyan-400/70 text-xs mb-2">Separation: {separationThreshold}</div>
-      <input disabled={mode === 'auto'} type="range" min={1} max={15} step={1} value={separationThreshold} onChange={(e) => setSeparationThreshold(Number(e.target.value))} className="w-full mb-3" />
-
-      <div className="text-cyan-400/70 text-xs mb-2">Min size: {minSize}</div>
-      <input disabled={mode === 'auto'} type="range" min={1} max={2000} step={1} value={minSize} onChange={(e) => setMinSize(Number(e.target.value))} className="w-full mb-3" />
-
-      <div className="text-cyan-400/70 text-xs mb-2">Max components: {maxComponents}</div>
-      <input disabled={mode === 'auto'} type="range" min={10} max={5000} step={10} value={maxComponents} onChange={(e) => setMaxComponents(Number(e.target.value))} className="w-full mb-3" />
+      <div className="text-cyan-400/70 text-[10px] mb-1">Max comp: {maxComponents}</div>
+      <input disabled={mode === 'auto'} type="range" min={10} max={5000} step={10} value={maxComponents} onChange={(e) => setMaxComponents(Number(e.target.value))} className="w-full mb-2 h-1" />
 
       {/* Indicador de estado de auto-detección */}
-      {!tilesLoaded && (
-        <div className="mb-3 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded text-xs text-yellow-400/80 font-mono flex items-center gap-2">
-          <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
-          Loading tiles...
-        </div>
-      )}
-
       {isAutoDetecting && (
-        <div className="mb-3 p-2 bg-cyan-500/10 border border-cyan-500/30 rounded text-xs text-cyan-400/80 font-mono flex items-center gap-2">
-          <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
-          Auto-detecting in background...
+        <div className="mb-2 p-1.5 bg-cyan-500/10 border border-cyan-500/30 rounded text-[10px] text-cyan-400/80 font-mono flex items-center gap-1.5">
+          <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse"></div>
+          Auto-detecting...
         </div>
       )}
 
       {cachedResult && !isAutoDetecting && !result && (
-        <div className="mb-3 p-2 bg-green-500/10 border border-green-500/30 rounded text-xs text-green-400/80 font-mono flex items-center gap-2">
-          <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-          Detection ready - Press RUN to view
+        <div className="mb-2 p-1.5 bg-green-500/10 border border-green-500/30 rounded text-[10px] text-green-400/80 font-mono flex items-center gap-1.5">
+          <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
+          Ready - Press RUN
         </div>
       )}
 
       <div className="flex gap-2">
-        <button onClick={runDetection} disabled={running} className="flex-1 py-2 bg-cyan-500/20 border border-cyan-500/50 rounded text-cyan-400 font-mono hover:bg-cyan-500/30 transition">
-          {running ? 'RUNNING...' : 'RUN'}
+        <button onClick={runDetection} disabled={running} className="flex-1 py-1.5 bg-cyan-500/20 border border-cyan-500/50 rounded text-cyan-400 text-xs font-mono hover:bg-cyan-500/30 transition">
+          {running ? 'RUN...' : 'RUN'}
         </button>
-        <button onClick={() => { setResult(null); setCachedResult(null); }} className="py-2 px-2 border border-cyan-500/20 rounded text-cyan-400 text-sm">CLR</button>
+        <button onClick={() => { setResult(null); setCachedResult(null); }} className="py-1.5 px-3 border border-cyan-500/20 rounded text-cyan-400 text-xs">CLR</button>
       </div>
 
       {result && (
-        <div className="mt-3 text-cyan-400/80 text-xs font-mono">
+        <div className="mt-2 text-cyan-400/80 text-[10px] font-mono">
           {result.error ? (
             <div className="text-red-400">Error: {String(result.error)}</div>
           ) : (
-            <div>{Array.isArray(result.bounding_box_list) ? `${result.bounding_box_list.length} objects detected` : JSON.stringify(result)}</div>
+            <div>{Array.isArray(result.bounding_box_list) ? `${result.bounding_box_list.length} objects` : JSON.stringify(result)}</div>
           )}
         </div>
       )}

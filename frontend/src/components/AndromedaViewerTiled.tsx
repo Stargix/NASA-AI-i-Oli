@@ -240,35 +240,32 @@ export default function AndromedaViewerTiled() {
                 }}
             />
 
-            {/* Panel de información cyber */}
-            <div className="absolute top-24 left-4 z-[1000] bg-black/80 backdrop-blur-md border border-cyan-500/30 rounded-lg p-4 font-mono text-sm shadow-[0_0_20px_rgba(6,182,212,0.3)]">
-                <div className="flex flex-col gap-2">
-                    <div className="text-cyan-400 font-bold mb-2 border-b border-cyan-500/30 pb-2 flex items-center gap-2">
-                        <span className="inline-block w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></span>
-                        TELEMETRY DATA
+            {/* Panel de información cyber - Compacto */}
+            <div className="absolute top-14 left-4 z-[1000] bg-black/80 backdrop-blur-md border border-cyan-500/30 rounded-lg p-2 font-mono text-xs shadow-[0_0_20px_rgba(6,182,212,0.3)]">
+                <div className="flex flex-col gap-1">
+                    <div className="text-cyan-400 font-bold text-[10px] mb-1 border-b border-cyan-500/30 pb-1 flex items-center gap-1.5">
+                        <span className="inline-block w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse"></span>
+                        TELEMETRY
                     </div>
-                    <div className="flex justify-between gap-8">
-                        <span className="text-cyan-400/60">ZOOM LEVEL:</span>
+                    <div className="flex justify-between gap-4 text-[10px]">
+                        <span className="text-cyan-400/60">ZOOM:</span>
                         <span className="text-cyan-400 font-bold">{zoom.toFixed(1)}</span>
                     </div>
-                    <div className="flex justify-between gap-8">
-                        <span className="text-cyan-400/60">COORD X:</span>
+                    <div className="flex justify-between gap-4 text-[10px]">
+                        <span className="text-cyan-400/60">X:</span>
                         <span className="text-cyan-400 font-bold">{coordinates.x.toLocaleString()}</span>
                     </div>
-                    <div className="flex justify-between gap-8">
-                        <span className="text-cyan-400/60">COORD Y:</span>
+                    <div className="flex justify-between gap-4 text-[10px]">
+                        <span className="text-cyan-400/60">Y:</span>
                         <span className="text-cyan-400 font-bold">{coordinates.y.toLocaleString()}</span>
                     </div>
-                    <div className="mt-2 pt-2 border-t border-cyan-500/30">
-                        <div className="text-[10px] text-cyan-400/40">
-                            Resolution: 40,000 × 10,000 px
-                        </div>
-                        <div className="text-[10px] text-cyan-400/40">
+                    <div className="mt-1 pt-1 border-t border-cyan-500/30">
+                        <div className="text-[8px] text-cyan-400/40">
                             {loading
-                                ? `Loading tiles: ${tilesLoaded}/${totalTiles}`
+                                ? `Loading: ${tilesLoaded}/${totalTiles}`
                                 : isZoomLoading
-                                    ? 'Loading high-res tiles...'
-                                    : 'Tiled rendering active'}
+                                    ? 'Loading tiles...'
+                                    : '40k×10k px'}
                         </div>
                     </div>
                 </div>
@@ -281,23 +278,23 @@ export default function AndromedaViewerTiled() {
                 </div>
             )}
 
-            {/* Controles adicionales */}
-            <div className="absolute top-24 right-4 z-[1000] flex flex-col gap-2">
+            {/* Controles adicionales - Compactos */}
+            <div className="absolute top-14 right-4 z-[1000] flex flex-col gap-1">
                 <button
                     onClick={() => mapRef.current?.zoomIn()}
-                    className="bg-black/80 backdrop-blur-md border border-cyan-500/30 rounded p-3 text-cyan-400 hover:bg-cyan-500/20 transition-all duration-300 hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(6,182,212,0.5)]"
+                    className="bg-black/80 backdrop-blur-md border border-cyan-500/30 rounded p-1.5 text-cyan-400 hover:bg-cyan-500/20 transition-all duration-300"
                     title="Zoom In"
                 >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                 </button>
                 <button
                     onClick={() => mapRef.current?.zoomOut()}
-                    className="bg-black/80 backdrop-blur-md border border-cyan-500/30 rounded p-3 text-cyan-400 hover:bg-cyan-500/20 transition-all duration-300 hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(6,182,212,0.5)]"
+                    className="bg-black/80 backdrop-blur-md border border-cyan-500/30 rounded p-1.5 text-cyan-400 hover:bg-cyan-500/20 transition-all duration-300"
                     title="Zoom Out"
                 >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
                     </svg>
                 </button>
@@ -313,10 +310,10 @@ export default function AndromedaViewerTiled() {
                             });
                         }
                     }}
-                    className="bg-black/80 backdrop-blur-md border border-cyan-500/30 rounded p-3 text-cyan-400 hover:bg-cyan-500/20 transition-all duration-300 hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(6,182,212,0.5)]"
-                    title="Reset View - Full Image"
+                    className="bg-black/80 backdrop-blur-md border border-cyan-500/30 rounded p-1.5 text-cyan-400 hover:bg-cyan-500/20 transition-all duration-300"
+                    title="Reset View"
                 >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
                     </svg>
                 </button>

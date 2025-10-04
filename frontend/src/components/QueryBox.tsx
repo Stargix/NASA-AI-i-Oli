@@ -51,7 +51,7 @@ export default function QueryBox({ onQuery, isLoading = false }: QueryBoxProps) 
             <div
                 onClick={handleContainerClick}
                 className={`
-                    relative bg-black/80 backdrop-blur-md border rounded-lg p-4
+                    relative bg-black/80 backdrop-blur-md border rounded-lg p-2
                     transition-all duration-500 ease-in-out cursor-text
                     ${isFocused
                         ? 'border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.4)]'
@@ -59,7 +59,7 @@ export default function QueryBox({ onQuery, isLoading = false }: QueryBoxProps) 
                     }
                 `}
             >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                     {/* Botón para adjuntar imágenes */}
                     <input
                         ref={fileInputRef}
@@ -76,7 +76,7 @@ export default function QueryBox({ onQuery, isLoading = false }: QueryBoxProps) 
                         }}
                         disabled={isLoading}
                         className="
-                            flex-shrink-0 p-2 rounded
+                            flex-shrink-0 p-1.5 rounded
                             text-cyan-400/60 hover:text-cyan-400
                             hover:bg-cyan-500/10
                             transition-all duration-300
@@ -85,7 +85,7 @@ export default function QueryBox({ onQuery, isLoading = false }: QueryBoxProps) 
                         title="Attach images"
                     >
                         <svg
-                            className="w-5 h-5"
+                            className="w-4 h-4"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -108,12 +108,12 @@ export default function QueryBox({ onQuery, isLoading = false }: QueryBoxProps) 
                         onKeyDown={handleKeyDown}
                         onFocus={() => setIsFocused(true)}
                         onBlur={() => setIsFocused(false)}
-                        placeholder="Enter query... (e.g., 'red star next to blue star')"
+                        placeholder="Query... (e.g., 'red star')"
                         disabled={isLoading}
                         className="
                             flex-1 bg-transparent border-none outline-none
                             text-cyan-400 placeholder-cyan-400/40
-                            font-mono text-sm
+                            font-mono text-xs
                             disabled:opacity-50 disabled:cursor-not-allowed
                         "
                     />
@@ -126,7 +126,7 @@ export default function QueryBox({ onQuery, isLoading = false }: QueryBoxProps) 
                         }}
                         disabled={(!query.trim() && attachedImages.length === 0) || isLoading}
                         className="
-                            flex-shrink-0 p-2 rounded-full
+                            flex-shrink-0 p-1.5 rounded-full
                             text-cyan-400
                             hover:bg-cyan-500/20
                             hover:shadow-[0_0_15px_rgba(6,182,212,0.5)]
@@ -138,10 +138,10 @@ export default function QueryBox({ onQuery, isLoading = false }: QueryBoxProps) 
                         title="Send query"
                     >
                         {isLoading ? (
-                            <div className="w-5 h-5 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin"></div>
+                            <div className="w-4 h-4 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin"></div>
                         ) : (
                             <svg
-                                className="w-5 h-5 rotate-90"
+                                className="w-4 h-4 rotate-90"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -159,14 +159,14 @@ export default function QueryBox({ onQuery, isLoading = false }: QueryBoxProps) 
 
                 {/* Imágenes adjuntadas */}
                 {attachedImages.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2">
+                    <div className="mt-2 flex flex-wrap gap-1.5">
                         {attachedImages.map((file, index) => (
                             <div
                                 key={index}
-                                className="relative group bg-cyan-500/10 border border-cyan-500/30 rounded px-3 py-1.5 flex items-center gap-2"
+                                className="relative group bg-cyan-500/10 border border-cyan-500/30 rounded px-2 py-1 flex items-center gap-1.5"
                             >
                                 <svg
-                                    className="w-4 h-4 text-cyan-400/60"
+                                    className="w-3 h-3 text-cyan-400/60"
                                     fill="none"
                                     stroke="currentColor"
                                     viewBox="0 0 24 24"
@@ -178,7 +178,7 @@ export default function QueryBox({ onQuery, isLoading = false }: QueryBoxProps) 
                                         d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                                     />
                                 </svg>
-                                <span className="text-[10px] font-mono text-cyan-400/80 max-w-[120px] truncate">
+                                <span className="text-[9px] font-mono text-cyan-400/80 max-w-[80px] truncate">
                                     {file.name}
                                 </span>
                                 <button
@@ -188,7 +188,7 @@ export default function QueryBox({ onQuery, isLoading = false }: QueryBoxProps) 
                                     }}
                                     className="text-cyan-400/60 hover:text-red-400 transition-colors"
                                 >
-                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                     </svg>
                                 </button>
@@ -198,20 +198,20 @@ export default function QueryBox({ onQuery, isLoading = false }: QueryBoxProps) 
                 )}
 
                 {/* Decorative elements */}
-                <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-transparent via-cyan-400/50 to-transparent"></div>
-                <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-transparent via-cyan-400/50 to-transparent"></div>
+                <div className="absolute -left-0.5 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-gradient-to-b from-transparent via-cyan-400/50 to-transparent"></div>
+                <div className="absolute -right-0.5 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-gradient-to-b from-transparent via-cyan-400/50 to-transparent"></div>
             </div>
 
-            {/* Helper text */}
-            <div className="mt-2 px-2 flex items-center justify-between text-[10px] font-mono text-cyan-400/40">
-                <div className="flex items-center gap-3">
+            {/* Helper text - Compacto */}
+            <div className="mt-1 px-2 flex items-center justify-between text-[8px] font-mono text-cyan-400/40">
+                <div className="flex items-center gap-2">
                     <span className="flex items-center">
-                        <span className="inline-block w-2 h-2 bg-cyan-400/40 rounded-full mr-2"></span>
-                        Press Enter to send
+                        <span className="inline-block w-1.5 h-1.5 bg-cyan-400/40 rounded-full mr-1"></span>
+                        Enter to send
                     </span>
                     {attachedImages.length > 0 && (
                         <span className="text-cyan-400/60">
-                            {attachedImages.length} image{attachedImages.length > 1 ? 's' : ''} attached
+                            {attachedImages.length} img{attachedImages.length > 1 ? 's' : ''}
                         </span>
                     )}
                 </div>

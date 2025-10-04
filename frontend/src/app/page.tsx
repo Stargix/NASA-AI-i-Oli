@@ -82,38 +82,35 @@ export default function Home() {
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-black">
-      {/* Header cyber NASA */}
+      {/* Header cyber NASA - Compacto */}
       <header className="absolute top-0 left-0 right-0 z-[1000] bg-gradient-to-b from-black/90 via-black/70 to-transparent backdrop-blur-sm border-b border-cyan-500/30">
-        <div className="flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-4">
-            <div className="text-cyan-400 font-bold text-2xl tracking-wider font-mono">
+        <div className="flex items-center justify-between px-3 py-2">
+          <div className="flex items-center gap-2">
+            <div className="text-cyan-400 font-bold text-lg tracking-wider font-mono">
               NASA
             </div>
-            <div className="h-8 w-px bg-cyan-500/50"></div>
-            <h1 className="text-white font-mono text-xl tracking-wide">
-              {customImage ? 'CUSTOM IMAGE EXPLORER' : 'ANDROMEDA EXPLORER'}
+            <div className="h-5 w-px bg-cyan-500/50"></div>
+            <h1 className="text-white font-mono text-sm tracking-wide">
+              {customImage ? 'CUSTOM EXPLORER' : 'ANDROMEDA'}
             </h1>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <button
               onClick={handleLoadNewImage}
-              className="px-4 py-2 border border-cyan-500/50 rounded text-cyan-400 text-xs font-mono bg-cyan-500/10 hover:bg-cyan-500/20 transition-all duration-300 hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(6,182,212,0.5)]"
+              className="px-2 py-1 border border-cyan-500/50 rounded text-cyan-400 text-[10px] font-mono bg-cyan-500/10 hover:bg-cyan-500/20 transition-all duration-300"
             >
-              UPLOAD IMAGE
+              UPLOAD
             </button>
             {customImage && (
               <button
                 onClick={handleReset}
-                className="px-4 py-2 border border-cyan-500/50 rounded text-cyan-400 text-xs font-mono bg-cyan-500/10 hover:bg-cyan-500/20 transition-all duration-300 hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(6,182,212,0.5)]"
+                className="px-2 py-1 border border-cyan-500/50 rounded text-cyan-400 text-[10px] font-mono bg-cyan-500/10 hover:bg-cyan-500/20 transition-all duration-300"
               >
-                VIEW ANDROMEDA
+                ANDROMEDA
               </button>
             )}
-            <div className="text-cyan-400/80 text-sm font-mono">
-              {customImage ? 'CUSTOM' : 'M31 GALAXY'}
-            </div>
-            <div className="px-3 py-1 border border-cyan-500/50 rounded text-cyan-400 text-xs font-mono bg-cyan-500/10">
-              ACTIVE
+            <div className="px-2 py-0.5 border border-cyan-500/50 rounded text-cyan-400 text-[9px] font-mono bg-cyan-500/10">
+              {customImage ? 'CUSTOM' : 'M31'}
             </div>
           </div>
         </div>
@@ -137,22 +134,22 @@ export default function Home() {
         />
       )}
 
-      {/* Query Box */}
-      <div className="absolute bottom-20 left-4 right-4 z-[1000]">
+      {/* Query Box - Compacto */}
+      <div className="absolute bottom-10 left-4 right-4 z-[1000]">
         <QueryBox onQuery={handleQuery} isLoading={isQueryLoading} />
       </div>
 
-      {/* Footer cyber */}
-      <div className="absolute bottom-4 left-4 right-4 z-[1000] flex items-center justify-between">
-        <div className="text-cyan-400/60 text-xs font-mono">
-          © NASA DEEP SPACE IMAGING
+      {/* Footer cyber - Compacto */}
+      <div className="absolute bottom-2 left-4 right-4 z-[1000] flex items-center justify-between">
+        <div className="text-cyan-400/60 text-[9px] font-mono">
+          © NASA IMAGING
         </div>
-        <div className="flex gap-4 text-cyan-400/60 text-xs font-mono">
-          <span>ZOOM: DYNAMIC</span>
+        <div className="flex gap-2 text-cyan-400/60 text-[9px] font-mono">
+          <span>ZOOM: DYN</span>
           <span>|</span>
-          <span>RES: ADAPTIVE</span>
+          <span>RES: ADAPT</span>
           <span>|</span>
-          <span>{customImage ? 'CUSTOM MODE' : 'ANDROMEDA MODE'}</span>
+          <span>{customImage ? 'CUSTOM' : 'M31'}</span>
         </div>
       </div>
     </div>
