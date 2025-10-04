@@ -1,5 +1,5 @@
 import cv2
-from no_nonsense_function import process_image
+from star_detection_tools import process_image
 from schema import BoundingBoxSchema
 import sqlite3, json, cv2
 from typing import List, Dict, Optional
@@ -115,16 +115,49 @@ def process_and_save_image(image_path: str, db_path: str = DB_PATH_DEFAULT) -> i
 from langchain_core.tools import tool
 
 def _select_safe(sql: str, db_path: str = DB_PATH_DEFAULT, limit: int = 200):
-    q = sql.strip().lower()
-    if not (q.startswith("select") or q.startswith("with")):
+    """
+    Ejecuta una consulta SELECT de forma segura, añadiendo LIMIT si es necesario.
+    """
+    # Normalizar la consulta
+    q = sql.strip()
+    if q.endswith(';'):
+        q = q[:-1].strip()
+    
+    # Convertir a minúsculas para verificaciones
+    q_lower = q.lower()
+    
+    # Verificar que es SELECT o WITH
+    if not (q_lower.startswith("select") or q_lower.startswith("with")):
         return {"error": "Solo se permiten SELECT/WITH.", "sql": sql}
-    if " limit " not in q:
-        sql = sql.rstrip().rstrip(";") + f" LIMIT {limit}"
-    con = sqlite3.connect(db_path); cur = con.cursor()
-    cur.execute(sql); cols = [c[0] for c in cur.description] if cur.description else []
-    rows = [dict(zip(cols, r)) for r in cur.fetchall()]
-    con.close()
-    return {"columns": cols, "rows": rows, "sql": sql}
+    
+    # Buscar LIMIT de forma más robusta
+    has_limit = any(
+        # Patrones comunes de LIMIT al final de la consulta
+        q_lower.endswith(pattern) or
+        f"{pattern} " in q_lower or
+        f"{pattern};" in q_lower
+        for pattern in [
+            f"limit {limit}",
+            "limit all",
+            *[f"limit {i}" for i in range(1, limit + 1)]
+        ]
+    )
+    
+    # Añadir LIMIT si no está presente
+    final_sql = f"{q} LIMIT {limit}" if not has_limit else q
+    
+    try:
+        con = sqlite3.connect(db_path)
+        cur = con.cursor()
+        cur.execute(final_sql)
+        cols = [c[0] for c in cur.description] if cur.description else []
+        rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+        con.close()
+        return {"columns": cols, "rows": rows, "sql": final_sql}
+    except sqlite3.Error as e:
+        return {"error": f"Error SQL: {str(e)}", "sql": final_sql}
+    except Exception as e:
+        return {"error": f"Error inesperado: {str(e)}", "sql": final_sql}
 
 @tool("ingestar_imagen")
 def ingestar_imagen(action_input: str) -> str:
