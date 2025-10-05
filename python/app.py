@@ -26,13 +26,20 @@ import numpy as np
 
 app = FastAPI()
 
-# CORS middleware
+# CORS middleware - Allow all origins for deployment
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:3001", 
+        "https://nasa.stargix.dev",
+        "https://nasa-ai-i-oli.vercel.app",
+        "*"  # Allow all other origins
+    ],
+    allow_credentials=False,  # Set to False when using wildcard
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Initialize database, agent, and constellation matcher
