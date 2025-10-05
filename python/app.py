@@ -40,7 +40,8 @@ async def star_analysis(data: schema.StarQuerySchema, request: Request):
         adaptative_filtering=data.adaptative_filtering,
         separation_threshold=data.separation_threshold,
         min_size=data.min_size,
-        max_components=data.max_components
+        max_components=data.max_components,
+        detect_clusters=data.detect_clusters
     )
     if tmp_path:
         import os
