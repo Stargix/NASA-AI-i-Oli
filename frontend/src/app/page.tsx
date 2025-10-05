@@ -9,6 +9,7 @@ import BoundingBoxOverlay from '@/components/BoundingBoxOverlay';
 import ChatPanel, { ChatMessage } from '@/components/ChatPanel';
 import FloatingImageViewer from '@/components/FloatingImageViewer';
 import Similarity from '@/components/Similarity';
+import Constellations from '@/components/Constellations';
 import { AndromedaViewerRef } from '@/components/AndromedaViewerTiled';
 import { DynamicViewerRef } from '@/components/DynamicImageViewer';
 
@@ -50,6 +51,7 @@ export default function Home() {
   // Floating image viewer state
   const [floatingImages, setFloatingImages] = useState<string[] | null>(null);
   const [showSimilarity, setShowSimilarity] = useState(false);
+  const [showConstellations, setShowConstellations] = useState(false);
 
   // Referencias para capturar screenshots
   const andromedaViewerRef = useRef<AndromedaViewerRef>(null);
@@ -215,12 +217,20 @@ export default function Home() {
               </button>
             )}
             {!customImage && (
-              <button
-                onClick={() => setShowSimilarity(!showSimilarity)}
-                className="px-3 py-1.5 sm:px-4 sm:py-2 border border-purple-500/50 rounded text-purple-400 text-xs sm:text-sm font-mono bg-purple-500/10 hover:bg-purple-500/20 transition-all duration-300 hover:shadow-[0_0_10px_rgba(168,85,247,0.3)]"
-              >
-                SIMILARITY
-              </button>
+              <>
+                <button
+                  onClick={() => setShowSimilarity(!showSimilarity)}
+                  className="px-3 py-1.5 sm:px-4 sm:py-2 border border-purple-500/50 rounded text-purple-400 text-xs sm:text-sm font-mono bg-purple-500/10 hover:bg-purple-500/20 transition-all duration-300 hover:shadow-[0_0_10px_rgba(168,85,247,0.3)]"
+                >
+                  SIMILARITY
+                </button>
+                <button
+                  onClick={() => setShowConstellations(!showConstellations)}
+                  className="px-3 py-1.5 sm:px-4 sm:py-2 border border-cyan-500/50 rounded text-cyan-400 text-xs sm:text-sm font-mono bg-cyan-500/10 hover:bg-cyan-500/20 transition-all duration-300 hover:shadow-[0_0_10px_rgba(6,182,212,0.3)]"
+                >
+                  CONSTELLATIONS
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -267,6 +277,11 @@ export default function Home() {
       {/* Similarity Panel */}
       {!customImage && showSimilarity && (
         <Similarity onClose={() => setShowSimilarity(false)} />
+      )}
+
+      {/* Constellations Panel */}
+      {!customImage && showConstellations && (
+        <Constellations onClose={() => setShowConstellations(false)} />
       )}
 
       {/* Chat Panel */}
