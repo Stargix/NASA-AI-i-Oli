@@ -1,19 +1,21 @@
+# Core dependencies first (with prebuilt wheels)
+numpy==1.24.3
+scipy==1.10.1
+pandas==2.0.3
+
 # Web Framework
 fastapi==0.115.5
 uvicorn[standard]==0.32.1
 
 # Image Processing (headless version for servers)
-opencv-python-headless==4.10.0.84
-Pillow==10.4.0
+opencv-python-headless==4.8.1.78
+Pillow==10.0.0
 
 # Scientific Computing - using versions with prebuilt wheels
-numpy==1.26.4
-scipy==1.11.4
-scikit-image==0.22.0
-pandas==2.1.4
+scikit-image==0.21.0
 
 # HTTP Requests
-requests==2.32.3
+requests==2.31.0
 
 # Pydantic for data validation
 pydantic==2.10.3
