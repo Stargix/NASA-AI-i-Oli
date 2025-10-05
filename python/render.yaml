@@ -2,11 +2,13 @@ services:
   - type: web
     name: nasa-ai-oli-api
     runtime: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn python.app:app --host 0.0.0.0 --port $PORT
+    buildCommand: |
+      pip install --upgrade pip
+      pip install --only-binary=:all: --no-build-isolation -r requirements.txt || pip install -r requirements.txt
+    startCommand: cd python && uvicorn app:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
-        value: 3.12.0
+        value: 3.11.0
       - key: PORT
         value: 10000
       - key: GOOGLE_API_KEY

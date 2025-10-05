@@ -2,21 +2,25 @@
 fastapi==0.115.5
 uvicorn[standard]==0.32.1
 
-# Image Processing
+# Image Processing (headless version for servers)
 opencv-python-headless==4.10.0.84
-numpy==1.26.4
 Pillow==10.4.0
 
-# Scientific Computing
-scipy==1.13.1
-scikit-image==0.24.0
-pandas==2.2.3
+# Scientific Computing - using versions with prebuilt wheels
+numpy==1.26.4
+scipy==1.11.4
+scikit-image==0.22.0
+pandas==2.1.4
 
 # HTTP Requests
 requests==2.32.3
 
 # Pydantic for data validation
 pydantic==2.10.3
+
+# LangChain for AI agent
+langchain==0.3.12
+langchain-google-genai==2.0.8
 
 # Environment variables
 python-dotenv==1.0.1
