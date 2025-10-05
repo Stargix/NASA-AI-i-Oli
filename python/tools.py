@@ -1,6 +1,7 @@
 import cv2
 from miquel.star_detection_tools import process_image, extract_properties_fast, find_clusters
-from schema import BoundingBoxSchema
+from miquel.similarity_function import compare_images_grid, average_scores
+from schema import BoundingBoxSchema, SimilarityResponseSchema, SimilarityScoresSchema
 import sqlite3, json, cv2
 from typing import List, Dict, Optional
 # from no_nonsense_function import process_image, extract_properties_fast
@@ -44,22 +45,28 @@ def extract_boxes_from_image(image_path, top_left=(0, 0), bottom_right=None, **k
     cropped = img[y1:y2, x1:x2]
 
     objects = detect_bounding_boxes(cropped, **kwargs)
+
     x_offset, y_offset = top_left
 
     boxes = []
     for obj in objects:
-        center_x = obj["centroid_x"] + x_offset
-        center_y = obj["centroid_y"] + y_offset
+        obj["centroid_x"] += x_offset
+        obj["centroid_y"] += y_offset
         boxes.append(
             BoundingBoxSchema(
-                center=(float(center_x), float(center_y)),
+                center=(float(obj["centroid_x"]), float(obj["centroid_y"])),
                 width=float(obj["bbox_width"]),
                 height=float(obj["bbox_height"]),
                 color=obj.get("color"),
                 obj_type=obj.get("obj_type")
             )
         )
+    
+    # Ensure database table exists and save objects
+    create_space_objects_table(DB_PATH_DEFAULT)
+    save_objects_to_db(objects, image_path, DB_PATH_DEFAULT)
     return boxes
+
 
 
 def detect_bounding_boxes(
@@ -73,7 +80,7 @@ def detect_bounding_boxes(
     max_components=1000,
     cluster_gaussian_blur=101,
     min_cluster_size=5000,
-    detect_clusters=True
+    detect_clusters=False
 ):
     """
     Procesa la imagen y devuelve una lista de diccionarios con las bounding boxes detectadas,
@@ -245,7 +252,7 @@ def ingestar_imagen(action_input: str) -> str:
             image_path = payload.get("image_path")
             db_path = payload.get("db_path", DB_PATH_DEFAULT)
         else:
-            image_path = txt  # interpretar como ruta
+            image_path = txt  
 
         if not image_path:
             return json.dumps({"error": "Falta 'image_path'."})
@@ -321,3 +328,56 @@ def save_temp_image_from_data_url(data_url: str) -> str:
     with os.fdopen(fd, 'wb') as f:
         f.write(base64.b64decode(b64))
     return tmp_path
+
+def get_similarity_scores(image_path1, image_path2, grid_size=10):
+    """
+    Devuelve un diccionario con los scores de similitud entre dos imágenes usando color, brightness y HOG.
+    Soporta rutas locales, URLs HTTP/HTTPS, y data URLs.
+    """
+    def load_image(path):
+        """Helper para cargar imágenes de diferentes fuentes"""
+        if isinstance(path, str) and (path.startswith('http://') or path.startswith('https://')):
+            print(f"Downloading image from URL: {path}")
+            response = requests.get(path, timeout=10)
+            response.raise_for_status()
+            image_array = np.frombuffer(response.content, dtype=np.uint8)
+            img = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+            if img is None:
+                raise ValueError(f"Failed to decode image from URL")
+            return img
+        elif isinstance(path, str) and path.startswith('data:image'):
+            # Data URL
+            m = re.match(r'data:(image/\w+);base64,(.*)', path, re.DOTALL)
+            if not m:
+                raise ValueError('Invalid data URL')
+            b64 = m.group(2)
+            img_bytes = base64.b64decode(b64)
+            image_array = np.frombuffer(img_bytes, dtype=np.uint8)
+            img = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+            if img is None:
+                raise ValueError('Failed to decode image from data URL')
+            return img
+        else:
+            # Local file path
+            img = cv2.imread(path)
+            if img is None:
+                raise ValueError(f"Could not load image: {path}")
+            return img
+
+    img1 = load_image(image_path1)
+    img2 = load_image(image_path2)
+
+    scores_color = compare_images_grid(img1, img2, grid_size=grid_size, method_type="color")
+    scores_brightness = compare_images_grid(img1, img2, grid_size=grid_size, method_type="brightness")
+    scores_hog = compare_images_grid(img1, img2, grid_size=grid_size, method_type="hog")
+    scores_average = average_scores(scores_color, scores_brightness, scores_hog)
+
+    return SimilarityResponseSchema(
+        grid_size=grid_size,
+        scores=SimilarityScoresSchema(
+            color=scores_color,
+            brightness=scores_brightness,
+            hog=scores_hog,
+            average=scores_average
+        )
+    )

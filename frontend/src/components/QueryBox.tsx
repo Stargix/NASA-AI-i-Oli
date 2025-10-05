@@ -47,7 +47,7 @@ export default function QueryBox({ onQuery, isLoading = false }: QueryBoxProps) 
     };
 
     return (
-        <div className="w-full max-w-4xl mx-auto">
+        <div className="w-full max-w-[64rem] mx-auto">
             <div
                 onClick={handleContainerClick}
                 className={`
@@ -202,32 +202,13 @@ export default function QueryBox({ onQuery, isLoading = false }: QueryBoxProps) 
                 <div className="absolute -right-0.5 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-gradient-to-b from-transparent via-cyan-400/50 to-transparent"></div>
             </div>
 
-            {/* Helper text - Compacto */}
-            <div className="mt-1 px-2 flex items-center justify-between text-[8px] font-mono text-cyan-400/40">
-                <div className="flex items-center gap-2">
-                    <span className="flex items-center">
-                        <span className="inline-block w-1.5 h-1.5 bg-cyan-400/40 rounded-full mr-1"></span>
-                        Enter to send
-                    </span>
-                    {attachedImages.length > 0 && (
-                        <span className="text-cyan-400/60">
-                            {attachedImages.length} img{attachedImages.length > 1 ? 's' : ''}
-                        </span>
-                    )}
-                </div>
-                <div>
-                    {query.length}/200
-                </div>
-            </div>
-
             {/* Example queries - Transición suave */}
             <div
                 className={`
-                    mt-3 px-2 transition-all duration-400 ease-in-out overflow-hidden
+                    mt-2 transition-all duration-400 ease-in-out overflow-hidden
                     ${!query && !isLoading ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0'}
                 `}
             >
-                <div className="text-[10px] font-mono text-cyan-400/30 mb-2">EXAMPLE QUERIES:</div>
                 <div className="flex flex-wrap gap-2">
                     {[
                         'red star next to blue star',
@@ -240,9 +221,10 @@ export default function QueryBox({ onQuery, isLoading = false }: QueryBoxProps) 
                             onClick={() => setQuery(example)}
                             className="
                                 px-3 py-1 rounded text-[10px] font-mono
-                                bg-cyan-500/5 border border-cyan-500/20
-                                text-cyan-400/50 hover:text-cyan-400/80
-                                hover:bg-cyan-500/10 hover:border-cyan-500/30
+                                bg-black/40 backdrop-blur-sm border border-cyan-500/30
+                                text-cyan-400/70 hover:text-cyan-400
+                                hover:bg-black/60 hover:border-cyan-400/50
+                                hover:shadow-[0_0_10px_rgba(6,182,212,0.2)]
                                 transition-all duration-200
                             "
                         >

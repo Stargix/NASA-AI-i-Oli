@@ -19,6 +19,7 @@ class StarQuerySchema(BaseModel):
     separation_threshold: int = Field(3, description="Erosion kernel size to separate objects")
     min_size: int = Field(20, description="Minimum size in pixels to consider a component")
     max_components: int = Field(1000, description="Maximum number of components to return")
+    detect_clusters: bool = Field(False, description="If true, detect clusters of stars")
 
 class StarResponseSchema(BaseModel):
     bounding_box_list: list[BoundingBoxSchema] = Field(
@@ -32,3 +33,18 @@ class ChatMessageSchema(BaseModel):
 
 class ChatResponseSchema(BaseModel):
     response: str
+
+class SimilarityScoresSchema(BaseModel):
+    color: List[List[float]]
+    brightness: List[List[float]]
+    hog: List[List[float]]
+    average: List[List[float]]
+
+class SimilarityResponseSchema(BaseModel):
+    grid_size: int
+    scores: SimilarityScoresSchema
+
+class SimilarityRequestSchema(BaseModel):
+    image_path1: str = Field(..., description="Path or URL of the first image")
+    image_path2: str = Field(..., description="Path or URL of the second image")
+    grid_size: int = Field(10, description="Grid size (default 10)")

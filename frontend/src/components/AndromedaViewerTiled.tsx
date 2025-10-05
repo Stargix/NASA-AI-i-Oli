@@ -1,10 +1,15 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import html2canvas from 'html2canvas';
 
-export default function AndromedaViewerTiled() {
+export interface AndromedaViewerRef {
+    captureCurrentView: () => Promise<string>;
+}
+
+const AndromedaViewerTiled = forwardRef<AndromedaViewerRef, {}>((props, ref) => {
     const mapRef = useRef<L.Map | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [zoom, setZoom] = useState(-4.8);
@@ -13,6 +18,49 @@ export default function AndromedaViewerTiled() {
     const [tilesLoaded, setTilesLoaded] = useState(0);
     const [totalTiles, setTotalTiles] = useState(0);
     const [isZoomLoading, setIsZoomLoading] = useState(false);
+
+    // Exponer la función de captura mediante ref
+    useImperativeHandle(ref, () => ({
+        captureCurrentView: async (): Promise<string> => {
+            if (!containerRef.current) {
+                console.error('Container ref not available');
+                return '';
+            }
+
+            try {
+                console.log('Capturing Andromeda current view...');
+
+                // Capturar el contenedor del mapa
+                const canvas = await html2canvas(containerRef.current, {
+                    backgroundColor: '#000000',
+                    scale: 1, // Ajusta según necesites más o menos resolución
+                    logging: false,
+                    useCORS: true,
+                    allowTaint: true,
+                    removeContainer: false,
+                    imageTimeout: 0,
+                    // Ignorar elementos de UI que no queremos en la captura
+                    ignoreElements: (element) => {
+                        // Ignorar elementos con z-index muy alto (UI)
+                        const zIndex = window.getComputedStyle(element).zIndex;
+                        if (zIndex && parseInt(zIndex) >= 900) {
+                            return true;
+                        }
+                        return false;
+                    }
+                });
+
+                // Convertir a base64 con calidad ajustable
+                const screenshot = canvas.toDataURL('image/jpeg', 0.85);
+                console.log('Andromeda screenshot captured successfully. Size:', screenshot.length);
+
+                return screenshot;
+            } catch (error) {
+                console.error('Failed to capture Andromeda view:', error);
+                return '';
+            }
+        }
+    }));
 
     useEffect(() => {
         if (!containerRef.current || mapRef.current) return;
@@ -145,6 +193,10 @@ export default function AndromedaViewerTiled() {
         map.on('zoomstart', () => {
             setIsZoomLoading(true);
             clearTimeout(zoomLoadingTimeout);
+            // Limpiar bounding boxes cuando empiece el zoom
+            if (typeof window !== 'undefined' && (window as any).clearBoundingBoxes) {
+                (window as any).clearBoundingBoxes();
+            }
         });
 
         map.on('zoomend', () => {
@@ -165,6 +217,10 @@ export default function AndromedaViewerTiled() {
             if (!loading) {
                 setIsZoomLoading(true);
                 clearTimeout(zoomLoadingTimeout);
+            }
+            // Limpiar bounding boxes cuando empiece el arrastre
+            if (typeof window !== 'undefined' && (window as any).clearBoundingBoxes) {
+                (window as any).clearBoundingBoxes();
             }
         });
 
@@ -195,6 +251,8 @@ export default function AndromedaViewerTiled() {
         // Función para actualizar el estado global del viewer
         const updateViewerState = () => {
             const center = map.getCenter();
+            const containerRect = containerRef.current?.getBoundingClientRect();
+            
             (window as any).andromedaViewerState = {
                 zoom: map.getZoom(),
                 centerPx: {
@@ -204,7 +262,14 @@ export default function AndromedaViewerTiled() {
                 imageSize: {
                     width: imageWidth,
                     height: imageHeight
-                }
+                },
+                // Añadir bounds del contenedor para Similarity
+                containerBounds: containerRect ? {
+                    left: containerRect.left,
+                    top: containerRect.top,
+                    width: containerRect.width,
+                    height: containerRect.height,
+                } : null
             };
         };
 
@@ -363,4 +428,8 @@ export default function AndromedaViewerTiled() {
             )}
         </div>
     );
-}
+});
+
+AndromedaViewerTiled.displayName = 'AndromedaViewerTiled';
+
+export default AndromedaViewerTiled;
