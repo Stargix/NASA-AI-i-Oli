@@ -67,6 +67,29 @@ async def shutdown_event():
         _db_connection.close()
         _db_connection = None
 
+@app.get("/")
+async def root():
+    """Root endpoint for health checks and API information"""
+    return {
+        "status": "online",
+        "service": "NASA AI-i-Oli API",
+        "version": "1.0.0",
+        "endpoints": {
+            "star_analysis": "/star_analysis",
+            "chat": "/chat",
+            "similarity": "/similarity",
+            "constellation_search": "/constellation/search",
+            "constellation_draw": "/constellation/draw"
+        },
+        "docs": "/docs",
+        "health": "OK"
+    }
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {"status": "healthy", "service": "online"}
+
 @app.get("/getimage")
 async def get_image(request: Request) -> Dict[str, str]:
     return {"image": "image_data"}
