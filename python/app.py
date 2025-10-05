@@ -17,6 +17,8 @@ from tools import (
     DB_PATH_DEFAULT
 )
 from agent import Agent
+from constellation_tools import ConstellationMatcher
+import numpy as np
 
 app = FastAPI()
 
@@ -29,9 +31,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize database and agent
+# Initialize database, agent, and constellation matcher
 _db_connection: Optional[sqlite3.Connection] = None
 _agent: Optional[Agent] = None
+_constellation_matcher: Optional[ConstellationMatcher] = None
 
 def get_db():
     global _db_connection
@@ -44,6 +47,14 @@ def get_agent():
     if _agent is None:
         _agent = Agent(get_db())
     return _agent
+
+def get_constellation_matcher():
+    global _constellation_matcher
+    if _constellation_matcher is None:
+        # Path to processed constellations directory
+        processed_dir = Path(__file__).parent.parent / 'tests' / 'processed_constellations'
+        _constellation_matcher = ConstellationMatcher(str(processed_dir))
+    return _constellation_matcher
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -135,7 +146,10 @@ async def chat_endpoint(data: schema.ChatMessageSchema):
                 response_text = (
                     f"Message: {data.message}\n" if data.message else ""
                 ) + f"Detected {len(boxes)} objects"
-                return schema.ChatResponseSchema(response=response_text)
+                return schema.ChatResponseSchema(
+                    response=response_text,
+                    bounding_box_list=boxes
+                )
 
         return schema.ChatResponseSchema(
             response=json.dumps(result, indent=2)
@@ -186,3 +200,160 @@ async def similarity_endpoint(data: schema.SimilarityRequestSchema):
             os.unlink(tmp_pattern)
         if tmp_target and os.path.exists(tmp_target):
             os.unlink(tmp_target)
+
+@app.post("/constellation/search", response_model=schema.ConstellationResponseSchema)
+async def constellation_search_endpoint(data: schema.ConstellationSearchRequestSchema):
+    """
+    Search for a specific constellation by name in the detected stars.
+    """
+    try:
+        matcher = get_constellation_matcher()
+        
+        # TODO: Get detected centroids from current image analysis
+        # For now, we'll return a message that this needs to be implemented
+        detected_centroids = data.detected_centroids
+        
+        if not detected_centroids:
+            return schema.ConstellationResponseSchema(
+                success=False,
+                message="No detected stars available. Please run star detection first."
+            )
+        
+        # Search for the constellation
+        match = matcher.find_specific_constellation(
+            data.constellation_name,
+            detected_centroids,
+            ransac_threshold=100.0,
+            min_inliers=3,
+            max_iters=1000,
+            rotation_step=15,
+            scale_range=(0.3, 5.0),
+            scale_steps=10
+        )
+        
+        if match:
+            # Calculate approximate position
+            transform_matrix = np.array(match['transformation_matrix'], dtype=np.float32)
+            canvas_size = 512  # Default canvas size
+            center_point = np.array([[canvas_size/2, canvas_size/2]], dtype=np.float32)
+            
+            # Apply transformation
+            transformed_center = matcher.apply_transformation(
+                center_point,
+                transform_matrix,
+                match['rotation_angle']
+            )[0]
+            
+            return schema.ConstellationResponseSchema(
+                success=True,
+                message="Constellation found!",
+                constellation_name=match.get('constellation_name', data.constellation_name),
+                constellation_index=match.get('constellation_index'),
+                inliers_count=match['inliers_count'],
+                total_points=len(match.get('pattern_centroids', [])),
+                inliers_ratio=match['inliers_ratio'],
+                rotation_angle=match['rotation_angle'],
+                scale=match['final_scale'],
+                position=(float(transformed_center[0]), float(transformed_center[1])),
+                transformation_matrix=match['transformation_matrix'],
+                matched_indices=match.get('matched_indices', [])
+            )
+        else:
+            return schema.ConstellationResponseSchema(
+                success=False,
+                message=f"Constellation '{data.constellation_name}' not found in the detected stars."
+            )
+            
+    except Exception as e:
+        return schema.ConstellationResponseSchema(
+            success=False,
+            message=f"Error searching for constellation: {str(e)}"
+        )
+
+@app.post("/constellation/draw", response_model=schema.ConstellationResponseSchema)
+async def constellation_draw_endpoint(data: schema.ConstellationDrawRequestSchema):
+    """
+    Launch interactive drawing interface to draw a custom constellation pattern
+    and match it against detected stars.
+    """
+    try:
+        matcher = get_constellation_matcher()
+        
+        # TODO: Get detected centroids from current image analysis
+        # For now, generate fake data for testing
+        detected_centroids = data.detected_centroids
+        
+        if not detected_centroids:
+            # Generate fake detected stars for testing
+            print("⚠️ No detected centroids provided, generating test data...")
+            np.random.seed(42)
+            num_stars = 100
+            detected_centroids = [
+                (float(np.random.uniform(100, 1900)), float(np.random.uniform(100, 1900)))
+                for _ in range(num_stars)
+            ]
+            
+            # Add a hidden triangle pattern for easier testing
+            triangle = [(100, 100), (50, 200), (150, 200)]
+            for point in triangle:
+                # Scale and position
+                x = point[0] * 5.0 + 1000
+                y = point[1] * 5.0 + 1000
+                detected_centroids.append((float(x), float(y)))
+        
+        # Launch drawing interface and match
+        match = matcher.draw_and_match_constellation(
+            detected_centroids=detected_centroids,
+            canvas_size=512,
+            point_width=25,
+            line_width=2,
+            ransac_threshold=100.0,
+            min_inliers=3,
+            max_iters=1000,
+            rotation_step=15,
+            scale_range=(0.5, 8.0),
+            scale_steps=10,
+            verbose=True
+        )
+        
+        if match:
+            # Calculate approximate position
+            transform_matrix = np.array(match['transformation_matrix'], dtype=np.float32)
+            canvas_size = 512
+            center_point = np.array([[canvas_size/2, canvas_size/2]], dtype=np.float32)
+            
+            # Apply transformation
+            transformed_center = matcher.apply_transformation(
+                center_point,
+                transform_matrix,
+                match['rotation_angle']
+            )[0]
+            
+            return schema.ConstellationResponseSchema(
+                success=True,
+                message="Custom constellation matched!",
+                constellation_name=match.get('constellation_name', 'Custom Pattern'),
+                constellation_index=match.get('constellation_index'),
+                inliers_count=match['inliers_count'],
+                total_points=len(match.get('pattern_centroids', [])),
+                inliers_ratio=match['inliers_ratio'],
+                rotation_angle=match['rotation_angle'],
+                scale=match['final_scale'],
+                position=(float(transformed_center[0]), float(transformed_center[1])),
+                transformation_matrix=match['transformation_matrix'],
+                matched_indices=match.get('matched_indices', []),
+                drawn_image_data_url=match.get('drawn_image_data_url')
+            )
+        else:
+            return schema.ConstellationResponseSchema(
+                success=False,
+                message="No match found for your drawn pattern."
+            )
+            
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return schema.ConstellationResponseSchema(
+            success=False,
+            message=f"Error processing drawn constellation: {str(e)}"
+        )

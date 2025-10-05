@@ -14,7 +14,9 @@ def interactive_draw(size=256, point_width=5, line_width=2):
         line_width: Thickness of lines in pixels (default: 2)
     
     Returns:
-        list: List of (x, y) coordinate tuples representing the points
+        tuple: (points, canvas) where:
+            - points: List of (x, y) coordinate tuples representing the points
+            - canvas: The drawn image as a numpy array
     """
     # Create black canvas
     canvas = np.zeros((size, size, 3), dtype=np.uint8)
@@ -119,13 +121,13 @@ def interactive_draw(size=256, point_width=5, line_width=2):
     
     cv2.destroyAllWindows()
 
-    return points
+    return points, canvas
 
 
 # Example usage
 if __name__ == "__main__":
     # Call the interactive drawing function
-    coordinates = interactive_draw(size=512, point_width=25, line_width=2)
+    coordinates, canvas = interactive_draw(size=512, point_width=25, line_width=2)
     
     # Print the coordinates
     print("\n📍 Point Coordinates:")
@@ -134,3 +136,8 @@ if __name__ == "__main__":
     
     print(f"\n✅ Total points: {len(coordinates)}")
     print(f"📋 Coordinates list: {coordinates}")
+    
+    # Save the drawn image if points were drawn
+    if len(coordinates) > 0:
+        cv2.imwrite('custom_constellation.png', canvas)
+        print("💾 Saved drawn constellation to 'custom_constellation.png'")

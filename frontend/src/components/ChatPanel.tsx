@@ -87,7 +87,7 @@ export default function ChatPanel({
                 <button
                     onClick={handleToggle}
                     className={`
-            fixed left-4 bottom-[82px] z-[1001]
+            fixed right-4 bottom-[82px] z-[1001]
             p-2.5 rounded-lg border transition-all duration-300
             ${isOpen
                             ? 'bg-cyan-500/20 border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.4)]'
@@ -129,7 +129,7 @@ export default function ChatPanel({
           flex flex-col
           ${isExpanded
                         ? 'left-1/2 top-[calc(50%-20px)] -translate-x-1/2 -translate-y-1/2 w-[800px] h-[calc(100vh-260px)] max-w-[90vw] max-h-[600px]'
-                        : 'left-4 bottom-[130px] w-64 max-w-[calc(100vw-2rem)] h-[calc(100vh-300px)] max-h-[405px]'
+                        : 'right-4 bottom-[130px] w-64 max-w-[calc(100vw-2rem)] h-[calc(100vh-300px)] max-h-[405px]'
                     }
           ${isOpen
                         ? 'opacity-100 scale-100'

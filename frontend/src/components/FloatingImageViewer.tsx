@@ -125,6 +125,22 @@ export default function FloatingImageViewer({ images, onClose }: FloatingImageVi
     const currentImage = images[currentIndex];
     const hasMultipleImages = images.length > 1;
 
+    // Detectar tipo de imagen
+    const isDrawnImage = currentImage.startsWith('data:image/png;base64');
+    const isConstellationImage = currentImage.includes('/constellations/');
+    
+    // Determinar el título y color según el tipo de imagen
+    let imageTitle = 'QUERY IMAGE';
+    let imageColor = 'cyan';
+    
+    if (isDrawnImage) {
+        imageTitle = '🎨 YOUR DRAWING';
+        imageColor = 'purple';
+    } else if (isConstellationImage) {
+        imageTitle = '⭐ CONSTELLATION';
+        imageColor = 'yellow';
+    }
+
     return (
         <div
             className={`
@@ -137,11 +153,23 @@ export default function FloatingImageViewer({ images, onClose }: FloatingImageVi
       `}
         >
             {/* Header */}
-            <div className="flex items-center justify-between px-3 py-2 border-b border-cyan-500/30">
+            <div className={`flex items-center justify-between px-3 py-2 border-b ${
+                imageColor === 'purple' ? 'border-purple-500/30' : 
+                imageColor === 'yellow' ? 'border-yellow-500/30' : 
+                'border-cyan-500/30'
+            }`}>
                 <div className="flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse"></div>
-                    <h3 className="text-cyan-400 font-mono text-[11px] font-bold tracking-wider">
-                        QUERY IMAGE {hasMultipleImages && `${currentIndex + 1}/${images.length}`}
+                    <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${
+                        imageColor === 'purple' ? 'bg-purple-400' : 
+                        imageColor === 'yellow' ? 'bg-yellow-400' : 
+                        'bg-cyan-400'
+                    }`}></div>
+                    <h3 className={`font-mono text-[11px] font-bold tracking-wider ${
+                        imageColor === 'purple' ? 'text-purple-400' : 
+                        imageColor === 'yellow' ? 'text-yellow-400' : 
+                        'text-cyan-400'
+                    }`}>
+                        {imageTitle} {hasMultipleImages ? `${currentIndex + 1}/${images.length}` : ''}
                     </h3>
                 </div>
                 <button
