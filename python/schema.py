@@ -32,3 +32,18 @@ class ChatMessageSchema(BaseModel):
 
 class ChatResponseSchema(BaseModel):
     response: str
+
+class SimilarityScoresSchema(BaseModel):
+    color: List[List[float]]
+    brightness: List[List[float]]
+    hog: List[List[float]]
+    average: List[List[float]]
+
+class SimilarityResponseSchema(BaseModel):
+    grid_size: int
+    scores: SimilarityScoresSchema
+
+class SimilarityRequestSchema(BaseModel):
+    image_path1: str = Field(..., description="Path or URL of the first image")
+    image_path2: str = Field(..., description="Path or URL of the second image")
+    grid_size: int = Field(10, description="Grid size (default 10)")

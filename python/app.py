@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Dict
 import schema
-from tools import extract_boxes_from_image, save_temp_image_from_url, save_temp_image_from_data_url
+from tools import extract_boxes_from_image, save_temp_image_from_url, save_temp_image_from_data_url, get_similarity_scores
 
 app = FastAPI()
 
@@ -84,3 +84,12 @@ async def chat_endpoint(data: schema.ChatMessageSchema):
         return schema.ChatResponseSchema(response=response_text)
     else:
         return schema.ChatResponseSchema(response=f"Received only text: {data.message}")
+
+@app.post("/similarity", response_model=schema.SimilarityResponseSchema)
+async def similarity_endpoint(data: schema.SimilarityRequestSchema):
+    result = get_similarity_scores(
+        image_path1=data.image_path1,
+        image_path2=data.image_path2,
+        grid_size=data.grid_size
+    )
+    return result

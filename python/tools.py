@@ -1,6 +1,7 @@
 import cv2
 from miquel.star_detection_tools import process_image, extract_properties_fast, find_clusters
-from schema import BoundingBoxSchema
+from miquel.similarity_function import compare_images_grid, average_scores
+from schema import BoundingBoxSchema, SimilarityResponseSchema, SimilarityScoresSchema
 import sqlite3, json, cv2
 from typing import List, Dict, Optional
 # from no_nonsense_function import process_image, extract_properties_fast
@@ -245,7 +246,7 @@ def ingestar_imagen(action_input: str) -> str:
             image_path = payload.get("image_path")
             db_path = payload.get("db_path", DB_PATH_DEFAULT)
         else:
-            image_path = txt  # interpretar como ruta
+            image_path = txt  
 
         if not image_path:
             return json.dumps({"error": "Falta 'image_path'."})
@@ -321,3 +322,28 @@ def save_temp_image_from_data_url(data_url: str) -> str:
     with os.fdopen(fd, 'wb') as f:
         f.write(base64.b64decode(b64))
     return tmp_path
+
+def get_similarity_scores(image_path1, image_path2, grid_size=10):
+    """
+    Devuelve un diccionario con los scores de similitud entre dos imágenes usando color, brightness y HOG.
+    """
+
+    img1 = cv2.imread(image_path1)
+    img2 = cv2.imread(image_path2)
+    if img1 is None or img2 is None:
+        raise ValueError("No se pudo cargar una de las imágenes.")
+
+    scores_color = compare_images_grid(img1, img2, grid_size=grid_size, method_type="color")
+    scores_brightness = compare_images_grid(img1, img2, grid_size=grid_size, method_type="brightness")
+    scores_hog = compare_images_grid(img1, img2, grid_size=grid_size, method_type="hog")
+    scores_average = average_scores(scores_color, scores_brightness, scores_hog)
+
+    return SimilarityResponseSchema(
+        grid_size=grid_size,
+        scores=SimilarityScoresSchema(
+            color=scores_color,
+            brightness=scores_brightness,
+            hog=scores_hog,
+            average=scores_average
+        )
+    )
