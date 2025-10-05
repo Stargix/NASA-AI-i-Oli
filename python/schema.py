@@ -19,7 +19,7 @@ class StarQuerySchema(BaseModel):
     separation_threshold: int = Field(3, description="Erosion kernel size to separate objects")
     min_size: int = Field(20, description="Minimum size in pixels to consider a component")
     max_components: int = Field(1000, description="Maximum number of components to return")
-    detect_clusters: bool = Field(True, description="If true, detect clusters of stars")
+    detect_clusters: bool = Field(False, description="If true, detect clusters of stars")
 
 class StarResponseSchema(BaseModel):
     bounding_box_list: list[BoundingBoxSchema] = Field(

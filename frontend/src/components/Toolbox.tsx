@@ -15,6 +15,7 @@ export default function Toolbox({ onResult, onCaptureView }: Props) {
   const [separationThreshold, setSeparationThreshold] = useState(3);
   const [minSize, setMinSize] = useState(20);
   const [maxComponents, setMaxComponents] = useState(1000);
+  const [detectCluster, setDetectCluster] = useState(false);
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<any>(null);
 
@@ -38,6 +39,13 @@ export default function Toolbox({ onResult, onCaptureView }: Props) {
     return () => {
       window.removeEventListener('chatRequestAutoMode', handleChatRequestAutoMode);
     };
+  }, [mode]);
+
+  // Cuando está en modo auto, detectCluster debe ser false
+  useEffect(() => {
+    if (mode === 'auto') {
+      setDetectCluster(false);
+    }
   }, [mode]);
 
   // Estado para la detección automática en background
@@ -145,6 +153,7 @@ export default function Toolbox({ onResult, onCaptureView }: Props) {
       separation_threshold: separationThreshold,
       min_size: minSize,
       max_components: maxComponents,
+      detect_clusters: mode === 'manual' ? detectCluster : false,
     };
 
     console.log('Toolbox: About to fetch /star_analysis', payload);
@@ -160,7 +169,7 @@ export default function Toolbox({ onResult, onCaptureView }: Props) {
     const data = await resp.json();
     console.log('Toolbox: Response data from /star_analysis', data);
     return data;
-  }, [mode, gaussianBlur, noiseThreshold, adaptativeFiltering, separationThreshold, minSize, maxComponents, onCaptureView]);
+  }, [mode, gaussianBlur, noiseThreshold, adaptativeFiltering, separationThreshold, minSize, maxComponents, detectCluster, onCaptureView]);
 
   // Función para ejecutar detección automática en background (sin mostrar resultados)
   const runAutoDetection = useCallback(async () => {
@@ -491,6 +500,20 @@ export default function Toolbox({ onResult, onCaptureView }: Props) {
                     }`}
                 >
                   {adaptativeFiltering ? '✓ ENABLED' : 'DISABLED'}
+                </button>
+              </div>
+
+              {/* Detect Cluster - Toggle Button */}
+              <div className="pt-1">
+                <label className="text-cyan-400/70 text-[10px] font-mono block mb-1.5">Detect Cluster</label>
+                <button
+                  onClick={() => setDetectCluster(!detectCluster)}
+                  className={`w-full py-2 rounded font-mono text-[10px] font-bold transition-all ${detectCluster
+                    ? 'bg-cyan-500/30 border border-cyan-400/60 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.3)]'
+                    : 'bg-black/40 border border-cyan-500/20 text-cyan-400/50 hover:border-cyan-500/40 hover:text-cyan-400/70'
+                    }`}
+                >
+                  {detectCluster ? '✓ ENABLED' : 'DISABLED'}
                 </button>
               </div>
 
