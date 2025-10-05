@@ -22,9 +22,9 @@ You have access to the following tools:
 Use ONLY these tools by name: {tool_names}
 
 DETECTION MODE RULES:
-1) If the input contains an 'IMAGE_PATH:' line, first call the `ingestar_imagen` tool.
+1) If the input contains an 'IMAGE_PATH:' line, first call the `save_temp_image_from_data_url` tool.
 2) For image analysis:
-   - Use `ingestar_imagen` to process the image
+   - Use `extract_boxes_from_image` to process the image
    - Use `ejecutar_sql` to query results
 3) Your job is to find objects in the database that match the user's description
 4) Always use tools to query the database
@@ -48,10 +48,9 @@ RESPONSE FORMAT:
 ReAct FORMAT:
 Question: {input}
 Thought: <Analyze what objects the user is looking for and construct the appropriate SQL query>
-Action: <ingestar_imagen or ejecutar_sql>
+Action: <ejecutar_sql and if IMAGE_PATH is present, save_temp_image_from_data_url>
 Action Input: <tool arguments; if ejecutar_sql, pass the COMPLETE SQL>
 Observation: <JSON result from the tool>
-... (repeat if necessary)
 Final Answer: <REPRODUCE EXACTLY the JSON from the last Observation>
 
 {agent_scratchpad}
@@ -137,38 +136,48 @@ Final Answer: <REPRODUCE EXACTLY the JSON from the last Observation>
         for row in result["rows"]:
             for key, value in row.items():
                 if isinstance(value, (int, str)) and "id" in key.lower():
-                    ids.add(str(value))
+                    s = str(value).strip()
+                    if s.isdigit():
+                        ids.add(s)
         
         if not ids:
             return {"bounding_box_list": []}
           
-        # Obtener detalles completos de los objetos
         details_query = f"""
-        SELECT id, centroid_x, centroid_y, color, obj_type,
-               bbox_x, bbox_y, bbox_width, bbox_height
+        SELECT id, bbox_x, bbox_y, bbox_width, bbox_height, centroid_x, centroid_y, color, obj_type
         FROM space_objects
         WHERE id IN ({','.join(ids)})
         """
         
         details_res = json.loads(self.ejecutar_sql(details_query))
-        if "error" in details_res or "rows" not in details_res:
+        if "rows" not in details_res:
             return {"bounding_box_list": []}
             
-        # Convertir cada objeto al formato BoundingBoxSchema
         bounding_boxes = []
         for row in details_res["rows"]:
-            # El centro según el schema debe ser (RA, Dec), pero usaremos centroid por ahora
-            center = (
-                row["centroid_x"] if row["centroid_x"] is not None else row["bbox_x"] + row["bbox_width"]/2,
-                row["centroid_y"] if row["centroid_y"] is not None else row["bbox_y"] + row["bbox_height"]/2
-            )
-            
+            bx = row.get("bbox_x")
+            by = row.get("bbox_y")
+            bw = row.get("bbox_width")
+            bh = row.get("bbox_height")
+            cx = row.get("centroid_x")
+            cy = row.get("centroid_y")
+
+            if None in (bx, by, bw, bh):
+                continue
+
+            # Usar SIEMPRE el centro del objeto (centroid_x, centroid_y) como "center"
+            # Igual que hace /star_analysis. Fallback al centro derivado del bbox si falta centroid.
+            if cx is not None and cy is not None:
+                center = (float(cx), float(cy))
+            else:
+                center = (float(bx) + float(bw)/2.0, float(by) + float(bh)/2.0)
+
             bounding_boxes.append({
                 "center": center,
-                "height": row["bbox_height"],
-                "width": row["bbox_width"],
-                "color": row["color"],
-                "obj_type": row["obj_type"]
+                "height": float(bh),
+                "width": float(bw),
+                "color": row.get("color") or "#00FFFF",
+                "obj_type": row.get("obj_type") or "unknown",
             })
             
         return {"bounding_box_list": bounding_boxes}
@@ -189,7 +198,7 @@ Final Answer: <REPRODUCE EXACTLY the JSON from the last Observation>
             
             res = self.executor.invoke({"input": user_query})
             result = json.loads(res["output"])
-            
+            print("Raw agent result:", result)
             # Enrich with bounding boxes
             return self._enrich_objects(result)
                 
