@@ -3,10 +3,14 @@ import os
 import json
 import sqlite3
 from typing import Optional, Dict
+from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.agents import create_react_agent, AgentExecutor
 from langchain.prompts import PromptTemplate
 from agent_tools import ejecutar_sql
+
+# Load environment variables
+load_dotenv()
 
 class Agent:
     PROMPT = """You are a specialized agent for detecting and analyzing spatial objects in astronomical images.
@@ -64,8 +68,10 @@ Final Answer: <REPRODUCE EXACTLY the JSON from the last Observation>
             connection (sqlite3.Connection): Connection to the SQLite database
             google_api_key (Optional[str]): The Google API key for the ChatGoogleGenerativeAI model.
         """
-        # Configurar API key explícitamente
-        os.environ["GOOGLE_API_KEY"] = "AIzaSyCDpY_7pT52MOWxXTLsWDErwgp6u_3z19k"
+        # Get API key from environment variable
+        google_api_key = os.getenv("GOOGLE_API_KEY")
+        if not google_api_key:
+            raise ValueError("GOOGLE_API_KEY not found in environment variables. Please set it in your .env file.")
         
         self.connection = connection
         # Configurar la función ejecutar_sql para usar la conexión

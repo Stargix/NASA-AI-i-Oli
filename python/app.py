@@ -7,7 +7,11 @@ import tempfile
 import base64
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 import schema
+
+# Load environment variables from .env file
+load_dotenv()
 from tools import (
     extract_boxes_from_image,
     save_temp_image_from_url,
@@ -106,12 +110,17 @@ async def chat_endpoint(data: schema.ChatMessageSchema):
             # Direct response without using agent or database
             from langchain_google_genai import ChatGoogleGenerativeAI
             
-            # Configure API key explicitly
-            os.environ["GOOGLE_API_KEY"] = "AIzaSyCDpY_7pT52MOWxXTLsWDErwgp6u_3z19k"
+            # Get API key from environment variable
+            google_api_key = os.getenv("GOOGLE_API_KEY")
+            if not google_api_key:
+                return schema.ChatResponseSchema(
+                    response="Error: GOOGLE_API_KEY not found in environment variables. Please set it in your .env file."
+                )
             
             llm = ChatGoogleGenerativeAI(
                 model="gemini-2.0-flash-exp",
-                temperature=0.7
+                temperature=0.7,
+                google_api_key=google_api_key
             )
             
             prompt = f"""You are an expert astronomy assistant. Answer this question concisely and informatively in English.   
