@@ -170,15 +170,43 @@ def visualize_scores(scores, title="Similarity Heatmap", cell_size=50):
 
 if __name__ == "__main__":
     import time
+    import os
     start_time = time.time()
-
-    small_path = "G:\\La meva unitat\\Universitat\\Projectes\\NASA\\webb.jpg"
-    small_path2 = "G:\\La meva unitat\\Universitat\\Projectes\\NASA\\webb_reduced.jpg"
+    
+    # Obtener la ruta base del proyecto
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.join(script_dir, "..", "..")
+    frontend_public = os.path.join(project_root, "frontend", "public")
+    
+    small_path = os.path.join(frontend_public, "andromeda.jpg")
+    small_path2 = os.path.join(frontend_public, "andro_pattern.jpg")
+    
+    # Verificar que los archivos existen
+    if not os.path.exists(small_path):
+        print(f"❌ Error: No se encuentra la imagen: {small_path}")
+        print(f"   Ruta absoluta: {os.path.abspath(small_path)}")
+        exit(1)
+    
+    if not os.path.exists(small_path2):
+        print(f"❌ Error: No se encuentra la imagen: {small_path2}")
+        print(f"   Ruta absoluta: {os.path.abspath(small_path2)}")
+        exit(1)
+    
+    print(f"✅ Cargando imagen 1: {small_path}")
+    print(f"✅ Cargando imagen 2: {small_path2}")
 
     resize_size = 2000
 
     OG_img1 = cv2.imread(small_path)
     OG_img2 = cv2.imread(small_path2)
+    
+    if OG_img1 is None:
+        print(f"❌ Error: No se pudo cargar la imagen 1: {small_path}")
+        exit(1)
+    
+    if OG_img2 is None:
+        print(f"❌ Error: No se pudo cargar la imagen 2: {small_path2}")
+        exit(1)
 
     if max(OG_img1.shape[0], OG_img1.shape[1]) > resize_size:
         scale = resize_size / max(OG_img1.shape[0], OG_img1.shape[1])

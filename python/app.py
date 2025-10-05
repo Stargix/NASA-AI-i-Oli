@@ -187,8 +187,8 @@ async def similarity_endpoint(data: schema.SimilarityRequestSchema):
 
         # Calculate similarity
         result = get_similarity_scores(
-            image_path1=pattern_path,
-            image_path2=target_path,
+            image_path1=target_path,
+            image_path2=pattern_path,
             grid_size=data.grid_size
         )
 
