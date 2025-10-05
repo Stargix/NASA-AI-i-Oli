@@ -33,6 +33,7 @@ class ChatMessageSchema(BaseModel):
 
 class ChatResponseSchema(BaseModel):
     response: str
+    bounding_box_list: Optional[List[BoundingBoxSchema]] = Field(None, description="List of detected objects with bounding boxes")
 
 class SimilarityScoresSchema(BaseModel):
     color: List[List[float]]
@@ -69,3 +70,4 @@ class ConstellationResponseSchema(BaseModel):
     position: Optional[Tuple[float, float]] = None
     transformation_matrix: Optional[List[List[float]]] = None
     matched_indices: Optional[List[int]] = Field(None, description="Indices of the detected stars that match the constellation")
+    drawn_image_data_url: Optional[str] = Field(None, description="Data URL of the custom drawn constellation image")

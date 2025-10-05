@@ -78,11 +78,25 @@ export default function Home() {
       setConstellationMatchedIndices(matchResult.matched_indices);
       setShowBoundingBoxes(true);
 
-      // Mostrar imagen de la constelación en el FloatingImageViewer
+      // Array para almacenar las imágenes a mostrar
+      const imagesToShow: string[] = [];
+
+      // Si hay un dibujo custom, mostrarlo primero
+      if (matchResult.drawn_image_data_url) {
+        console.log('🎨 Adding custom drawn constellation image');
+        imagesToShow.push(matchResult.drawn_image_data_url);
+      }
+
+      // Si hay un índice de constelación predefinida, agregar esa imagen también
       if (matchResult.constellation_index !== undefined && matchResult.constellation_index !== null) {
         const constellationImageUrl = `/constellations/image${matchResult.constellation_index}_filtered.png`;
         console.log('🖼️ Loading constellation image:', constellationImageUrl);
-        setFloatingImages([constellationImageUrl]);
+        imagesToShow.push(constellationImageUrl);
+      }
+
+      // Actualizar las imágenes flotantes
+      if (imagesToShow.length > 0) {
+        setFloatingImages(imagesToShow);
       }
     }
   };
@@ -241,6 +255,14 @@ export default function Home() {
       const data = await response.json();
       const processingTime = Date.now() - startTime;
 
+      // Si el chat devuelve bounding boxes, mostrarlos
+      if (data.bounding_box_list && data.bounding_box_list.length > 0) {
+        console.log('🎯 Chat returned bounding boxes:', data.bounding_box_list);
+        setDetectionResult({ bounding_box_list: data.bounding_box_list });
+        setShowBoundingBoxes(true);
+        setConstellationMatchedIndices(undefined);
+      }
+
       // Add assistant response to chat
       const assistantMessage: ChatMessage = {
         id: `assistant-${Date.now()}`,
@@ -249,7 +271,7 @@ export default function Home() {
         timestamp: new Date(),
         metadata: {
           processingTime,
-          detections: data.detections || 0,
+          detections: data.bounding_box_list?.length || 0,
         },
       };
       setChatMessages(prev => [...prev, assistantMessage]);
@@ -306,13 +328,19 @@ export default function Home() {
             {!customImage && (
               <>
                 <button
-                  onClick={() => setShowSimilarity(!showSimilarity)}
+                  onClick={() => {
+                    setShowSimilarity(!showSimilarity);
+                    if (!showSimilarity) setShowConstellations(false); // Cierra Constellations al abrir Similarity
+                  }}
                   className="px-3 py-1.5 sm:px-4 sm:py-2 border border-purple-500/50 rounded text-purple-400 text-xs sm:text-sm font-mono bg-purple-500/10 hover:bg-purple-500/20 transition-all duration-300 hover:shadow-[0_0_10px_rgba(168,85,247,0.3)]"
                 >
                   SIMILARITY
                 </button>
                 <button
-                  onClick={() => setShowConstellations(!showConstellations)}
+                  onClick={() => {
+                    setShowConstellations(!showConstellations);
+                    if (!showConstellations) setShowSimilarity(false); // Cierra Similarity al abrir Constellations
+                  }}
                   className="px-3 py-1.5 sm:px-4 sm:py-2 border border-cyan-500/50 rounded text-cyan-400 text-xs sm:text-sm font-mono bg-cyan-500/10 hover:bg-cyan-500/20 transition-all duration-300 hover:shadow-[0_0_10px_rgba(6,182,212,0.3)]"
                 >
                   CONSTELLATIONS

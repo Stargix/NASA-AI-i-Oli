@@ -146,7 +146,10 @@ async def chat_endpoint(data: schema.ChatMessageSchema):
                 response_text = (
                     f"Message: {data.message}\n" if data.message else ""
                 ) + f"Detected {len(boxes)} objects"
-                return schema.ChatResponseSchema(response=response_text)
+                return schema.ChatResponseSchema(
+                    response=response_text,
+                    bounding_box_list=boxes
+                )
 
         return schema.ChatResponseSchema(
             response=json.dumps(result, indent=2)
@@ -338,7 +341,8 @@ async def constellation_draw_endpoint(data: schema.ConstellationDrawRequestSchem
                 scale=match['final_scale'],
                 position=(float(transformed_center[0]), float(transformed_center[1])),
                 transformation_matrix=match['transformation_matrix'],
-                matched_indices=match.get('matched_indices', [])
+                matched_indices=match.get('matched_indices', []),
+                drawn_image_data_url=match.get('drawn_image_data_url')
             )
         else:
             return schema.ConstellationResponseSchema(

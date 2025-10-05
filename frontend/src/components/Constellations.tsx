@@ -126,7 +126,7 @@ export default function Constellations({ onClose, detectedCentroids, onConstella
   };
 
   return (
-    <div className="absolute top-[520px] left-4 z-[1100] w-64 bg-black/90 border border-cyan-500/30 rounded-lg shadow-[0_0_20px_rgba(6,182,212,0.2)]">
+    <div className="absolute top-[420px] left-4 z-[1100] w-64 bg-black/90 border border-cyan-500/30 rounded-lg shadow-[0_0_20px_rgba(6,182,212,0.2)]">
       {/* Header */}
       <div className="p-2.5 border-b border-cyan-500/20 flex items-center justify-between">
         <div className="text-cyan-400 font-mono font-bold text-xs flex items-center gap-1.5">
@@ -214,7 +214,7 @@ export default function Constellations({ onClose, detectedCentroids, onConstella
                   <div className="text-green-400 font-bold mb-2">✓ Match Found!</div>
                   {result.constellation_index !== undefined && result.constellation_index !== null && (
                     <div className="p-1.5 mb-2 bg-yellow-500/10 border border-yellow-500/30 rounded text-[8px] text-yellow-400">
-                      🎨🖼️ Your drawing and constellation displayed in top-right corner
+                      🖼️ Constellation image displayed in top-right corner
                     </div>
                   )}
                   {result.constellation_name && (

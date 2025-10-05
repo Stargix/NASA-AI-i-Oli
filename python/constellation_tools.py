@@ -599,7 +599,7 @@ class ConstellationMatcher:
                 print("="*70 + "\n")
             
             # Launch interactive drawing
-            drawn_centroids = interactive_draw(
+            drawn_centroids, drawn_canvas = interactive_draw(
                 size=canvas_size,
                 point_width=point_width,
                 line_width=line_width
@@ -614,6 +614,17 @@ class ConstellationMatcher:
                 print(f"\n✓ Drew constellation with {len(drawn_centroids)} stars")
                 print(f"  Centroids: {drawn_centroids[:5]}{'...' if len(drawn_centroids) > 5 else ''}")
                 print("\nSearching for match in detected objects...")
+            
+            # Save the drawn constellation image
+            import tempfile
+            import base64
+            from io import BytesIO
+            from PIL import Image
+            
+            # Convert canvas to base64 for transmission
+            _, buffer = cv2.imencode('.png', drawn_canvas)
+            drawn_image_base64 = base64.b64encode(buffer).decode('utf-8')
+            drawn_image_data_url = f"data:image/png;base64,{drawn_image_base64}"
             
             # Convert to numpy arrays
             pattern_centroids = np.array(drawn_centroids, dtype=np.float32)
@@ -635,6 +646,7 @@ class ConstellationMatcher:
             if match:
                 match['constellation_name'] = 'Custom Drawn Pattern'
                 match['pattern_centroids'] = drawn_centroids
+                match['drawn_image_data_url'] = drawn_image_data_url
                 
                 if verbose:
                     print(f"\n{'='*70}")
