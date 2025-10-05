@@ -204,6 +204,39 @@ export default function Toolbox({ onResult }: Props) {
     }
   };
 
+  // Función para probar con datos de ejemplo (DEMO)
+  const runDemoDetection = () => {
+    const demoData = {
+      bounding_box_list: [
+        { center: [403.5, 109.5], height: 1.0, width: 1.0, color: 'blue', obj_type: 'star' },
+        { center: [427.0, 111.0], height: 4.0, width: 4.0, color: 'blue', obj_type: 'star' },
+        { center: [151.5, 195.0], height: 2.0, width: 1.0, color: 'red', obj_type: 'galaxy' },
+        { center: [231.5, 285.0], height: 2.0, width: 1.0, color: 'red', obj_type: 'galaxy' },
+        { center: [253.5, 298.5], height: 1.0, width: 1.0, color: 'red', obj_type: 'star' },
+        { center: [284.0, 339.5], height: 9.0, width: 10.0, color: 'blue', obj_type: 'star' },
+        { center: [496.5, 388.0], height: 6.0, width: 7.0, color: 'blue', obj_type: 'star' },
+        { center: [349.0, 389.5], height: 5.0, width: 6.0, color: 'blue', obj_type: 'star' },
+        { center: [210.0, 411.5], height: 3.0, width: 4.0, color: 'red', obj_type: 'galaxy' },
+        { center: [196.5, 453.5], height: 1.0, width: 1.0, color: 'blue', obj_type: 'star' },
+        { center: [334.5, 499.5], height: 1.0, width: 1.0, color: 'red', obj_type: 'star' },
+        { center: [341.0, 499.0], height: 2.0, width: 4.0, color: 'red', obj_type: 'galaxy' },
+        { center: [158.0, 102.5], height: 5.0, width: 14.0, color: 'red', obj_type: 'cluster' },
+        { center: [178.5, 104.0], height: 8.0, width: 7.0, color: 'red', obj_type: 'cluster' },
+        { center: [300.0, 300.0], height: 40.0, width: 40.0, color: 'red', obj_type: 'cluster' }, // Reducido para ser visible
+        { center: [403.0, 111.5], height: 23.0, width: 10.0, color: 'blue', obj_type: 'cluster' },
+        { center: [439.0, 136.5], height: 73.0, width: 44.0, color: 'red', obj_type: 'cluster' },
+        { center: [470.5, 102.0], height: 4.0, width: 15.0, color: 'red', obj_type: 'cluster' },
+        { center: [102.5, 114.0], height: 10.0, width: 5.0, color: 'red', obj_type: 'cluster' },
+        { center: [350.5, 112.5], height: 7.0, width: 7.0, color: 'red', obj_type: 'cluster' },
+      ]
+    };
+    
+    console.log('🎭 DEMO mode: Using sample data');
+    setResult(demoData);
+    setCachedResult(demoData);
+    onResult?.(demoData);
+  };
+
   return (
     <>
       <style>{`
@@ -305,6 +338,13 @@ export default function Toolbox({ onResult }: Props) {
                   className="flex-1 py-1.5 bg-cyan-500/20 border border-cyan-500/50 rounded text-cyan-400 text-[11px] font-mono hover:bg-cyan-500/30 transition-all disabled:opacity-50"
                 >
                   {running ? '⟳ RUN...' : '▶ RUN'}
+                </button>
+                <button
+                  onClick={runDemoDetection}
+                  className="py-1.5 px-2.5 bg-purple-500/20 border border-purple-500/50 rounded text-purple-400 text-[11px] font-mono hover:bg-purple-500/30 transition-all"
+                  title="Load demo data"
+                >
+                  🎭
                 </button>
                 <button
                   onClick={() => { setResult(null); setCachedResult(null); }}
@@ -439,6 +479,13 @@ export default function Toolbox({ onResult }: Props) {
                   className="flex-1 py-2 bg-cyan-500/20 border border-cyan-500/50 rounded text-cyan-400 text-[11px] font-mono hover:bg-cyan-500/30 transition-all disabled:opacity-50 font-bold"
                 >
                   {running ? '⟳ PROCESSING...' : '▶ RUN DETECTION'}
+                </button>
+                <button
+                  onClick={runDemoDetection}
+                  className="px-3 py-2 bg-purple-500/20 border border-purple-500/50 rounded text-purple-400 text-[11px] font-mono hover:bg-purple-500/30 transition-all font-bold"
+                  title="Load demo data for testing"
+                >
+                  🎭 DEMO
                 </button>
                 <button
                   onClick={() => { setResult(null); setCachedResult(null); }}

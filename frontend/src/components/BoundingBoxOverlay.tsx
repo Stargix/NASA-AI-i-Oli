@@ -31,9 +31,23 @@ export default function BoundingBoxOverlay({ boxes, visible, onClose }: Props) {
     return () => clearInterval(interval);
   }, []);
 
+  // Debug logs
+  useEffect(() => {
+    console.log('🎯 BoundingBoxOverlay render check:', {
+      visible,
+      hasViewerState: !!viewerState,
+      boxesCount: boxes.length,
+      boxes: boxes.slice(0, 3), // primeros 3 boxes
+      viewerState
+    });
+  }, [visible, viewerState, boxes]);
+
   if (!visible || !viewerState || boxes.length === 0) {
+    console.log('⚠️ BoundingBoxOverlay NOT rendering:', { visible, hasViewerState: !!viewerState, boxesCount: boxes.length });
     return null;
   }
+
+  console.log('✅ BoundingBoxOverlay RENDERING with', boxes.length, 'boxes');
 
   // Función para convertir coordenadas de imagen a coordenadas de pantalla
   const imageToScreen = (imageX: number, imageY: number) => {
@@ -77,6 +91,19 @@ export default function BoundingBoxOverlay({ boxes, visible, onClose }: Props) {
           const boxWidth = box.width * scale;
           const boxHeight = box.height * scale;
 
+          // Debug primer box
+          if (index === 0) {
+            console.log('📦 First box calculation:', {
+              box,
+              imageCoords: { centerX, centerY },
+              screenCoords: { x, y },
+              scale,
+              boxWidth,
+              boxHeight,
+              viewerState
+            });
+          }
+
           // Solo renderizar si está visible en la pantalla
           const isVisible = 
             x + boxWidth / 2 > 0 &&
@@ -84,7 +111,12 @@ export default function BoundingBoxOverlay({ boxes, visible, onClose }: Props) {
             y + boxHeight / 2 > 0 &&
             y - boxHeight / 2 < window.innerHeight;
 
-          if (!isVisible) return null;
+          if (!isVisible) {
+            if (index === 0) console.log('⚠️ First box NOT visible');
+            return null;
+          }
+
+          if (index === 0) console.log('✅ First box IS visible, rendering...');
 
           // Color del borde según el color del objeto
           const borderColor = box.color === 'red' 
