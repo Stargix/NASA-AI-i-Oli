@@ -126,7 +126,7 @@ export default function Constellations({ onClose, detectedCentroids, onConstella
   };
 
   return (
-    <div className="absolute top-[420px] left-4 z-[1100] w-64 bg-black/90 border border-cyan-500/30 rounded-lg shadow-[0_0_20px_rgba(6,182,212,0.2)]">
+    <div className="absolute top-[408px] left-4 z-[1100] w-64 bg-black/90 border border-cyan-500/30 rounded-lg shadow-[0_0_20px_rgba(6,182,212,0.2)]">
       {/* Header */}
       <div className="p-2.5 border-b border-cyan-500/20 flex items-center justify-between">
         <div className="text-cyan-400 font-mono font-bold text-xs flex items-center gap-1.5">

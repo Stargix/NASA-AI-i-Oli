@@ -23,7 +23,7 @@ export default function Similarity({ onClose }: Props) {
   const [gridSize, setGridSize] = useState(10);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<SimilarityResult | null>(null);
-  const [selectedMetric, setSelectedMetric] = useState<'average' | 'color' | 'brightness' | 'hog'>('average');
+  const [selectedMetric, setSelectedMetric] = useState<'color' | 'brightness' | 'hog'>('color');
   const [error, setError] = useState<string | null>(null);
   const [showOverlay, setShowOverlay] = useState(false);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -137,43 +137,45 @@ export default function Similarity({ onClose }: Props) {
     for (let row = 0; row < result.grid_size; row++) {
       for (let col = 0; col < result.grid_size; col++) {
         const score = scores[row][col];
-        
-        // Convertir el score (0-1) a un color del espectro amarillo -> azul -> verde
-        const color = scoreToColor(score);
+
+        // Convertir el score (0-1) a un color del espectro naranja -> amarillo -> verde
+        const fillColor = scoreToColor(score);
+        const borderColor = scoreToBorderColor(score);
 
         // Posición de la celda en la pantalla
         const x = imageLeft + col * cellWidth;
         const y = imageTop + row * cellHeight;
 
-        // Dibujar la celda con transparencia
-        ctx.fillStyle = color;
+        // Dibujar la celda con transparencia baja
+        ctx.fillStyle = fillColor;
         ctx.fillRect(x, y, cellWidth, cellHeight);
 
-        // Dibujar el borde de la celda
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        // Dibujar el borde con el mismo color pero más opaco
+        ctx.strokeStyle = borderColor;
         ctx.lineWidth = 1;
         ctx.strokeRect(x, y, cellWidth, cellHeight);
 
         // Dibujar el número de similitud en el centro de la celda
         const percentage = (score * 100).toFixed(0);
         const fontSize = Math.max(8, Math.min(cellWidth / 4, cellHeight / 4, 16));
-        
+
         ctx.font = `bold ${fontSize}px monospace`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        
+
         // Sombra para el texto para mejor legibilidad
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-        ctx.shadowBlur = 3;
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        ctx.shadowBlur = 2;
         ctx.shadowOffsetX = 1;
         ctx.shadowOffsetY = 1;
-        
-        // Color del texto basado en el fondo
-        ctx.fillStyle = score > 0.5 ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.85)';
-        
+
+        // Color del texto basado en el score (mismo color que la celda pero muy opaco)
+        const textColor = scoreToTextColor(score);
+        ctx.fillStyle = textColor;
+
         // Dibujar el texto en el centro de la celda
         ctx.fillText(`${percentage}%`, x + cellWidth / 2, y + cellHeight / 2);
-        
+
         // Resetear la sombra
         ctx.shadowColor = 'transparent';
         ctx.shadowBlur = 0;
@@ -183,29 +185,54 @@ export default function Similarity({ onClose }: Props) {
     }
   }, [result, selectedMetric, showOverlay]);
 
-  // Función para convertir score a color (amarillo -> azul -> verde)
-  const scoreToColor = (score: number): string => {
-    // Asegurar que el score está entre 0 y 1
+  // Función para obtener RGB del score (Rojo -> Amarillo -> Verde) - Tonos saturados pero no brillantes
+  const getScoreRGB = (score: number): { r: number; g: number; b: number } => {
     const clampedScore = Math.max(0, Math.min(1, score));
-    
-    // Transparencia más baja para mayor transparencia
-    const alpha = 0.35;
-    
+
+    // Función de interpolación suave (smoothstep)
+    const smoothLerp = (a: number, b: number, t: number): number => {
+      const smoothT = t * t * (3 - 2 * t);
+      return Math.round(a + (b - a) * smoothT);
+    };
+
     if (clampedScore < 0.5) {
-      // Amarillo (0) -> Azul (0.5)
+      // Rojo saturado (220, 40, 40) -> Amarillo saturado (220, 200, 0)
       const t = clampedScore / 0.5;
-      const r = Math.round(255 * (1 - t));
-      const g = Math.round(255 * (1 - t));
-      const b = Math.round(255 * t);
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      return {
+        r: 220,
+        g: smoothLerp(40, 200, t),
+        b: smoothLerp(40, 0, t)
+      };
     } else {
-      // Azul (0.5) -> Verde (1.0)
+      // Amarillo saturado (220, 200, 0) -> Verde bosque (40, 180, 40)
       const t = (clampedScore - 0.5) / 0.5;
-      const r = 0;
-      const g = Math.round(255 * t);
-      const b = Math.round(255 * (1 - t));
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      return {
+        r: smoothLerp(220, 40, t),
+        g: smoothLerp(200, 180, t),
+        b: smoothLerp(0, 40, t)
+      };
     }
+  };
+
+  // Función para convertir score a color con transparencia para el relleno
+  const scoreToColor = (score: number): string => {
+    const { r, g, b } = getScoreRGB(score);
+    const alpha = 0.075; // Muy transparente para el relleno
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+
+  // Función para convertir score a color para el borde (más opaco)
+  const scoreToBorderColor = (score: number): string => {
+    const { r, g, b } = getScoreRGB(score);
+    const alpha = 0.6; // Más opaco para el borde
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+
+  // Función para convertir score a color para el texto (muy opaco)
+  const scoreToTextColor = (score: number): string => {
+    const { r, g, b } = getScoreRGB(score);
+    const alpha = 0.95; // Muy opaco para el texto
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   };
 
   const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -281,37 +308,51 @@ export default function Similarity({ onClose }: Props) {
         </div>
       )}
 
-      {/* Botón para cerrar la matriz cuando está visible */}
+      {/* Aviso cuando la matriz está visible */}
       {showOverlay && (
-        <div className="fixed top-4 right-4 z-[1200]">
-          <button
-            onClick={handleCloseOverlay}
-            className="px-4 py-2 bg-red-500/80 hover:bg-red-500 border border-red-400 rounded-lg text-white font-mono text-sm font-bold shadow-lg transition-all flex items-center gap-2"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-            HIDE MATRIX
-          </button>
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-[1200] bg-black/80 backdrop-blur-sm border border-cyan-500/40 rounded-lg px-4 py-2 shadow-[0_0_20px_rgba(6,182,212,0.3)]">
+          <div className="text-cyan-400 font-mono text-[10px] font-bold flex items-center gap-2">
+            <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse"></div>
+            MAP INTERACTION DISABLED
+          </div>
         </div>
       )}
 
-      {/* Aviso cuando la matriz está visible */}
-      {showOverlay && (
-        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-[1200] bg-purple-500/90 border border-purple-400 rounded-lg px-4 py-2 shadow-lg">
-          <div className="text-white font-mono text-xs font-bold flex items-center gap-2">
-            <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-            🔒 Map interaction disabled - Close matrix to re-enable
+      {/* Pattern Loaded Floating Window */}
+      {patternImage && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[1100] w-64 bg-black/90 border border-cyan-500/30 rounded-lg shadow-[0_0_20px_rgba(6,182,212,0.2)]">
+          {/* Header */}
+          <div className="p-2.5 border-b border-cyan-500/20 flex items-center justify-between">
+            <div className="text-cyan-400 font-mono font-bold text-xs flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
+              PATTERN LOADED
+            </div>
+            <button
+              onClick={() => setPatternImage(null)}
+              className="text-cyan-400/60 hover:text-cyan-400 transition-colors"
+              title="Remove pattern"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          {/* Content */}
+          <div className="p-2.5">
+            <div className="border border-cyan-500/20 rounded overflow-hidden">
+              <img src={patternImage} alt="Pattern" className="w-full h-32 object-contain bg-black/50" />
+            </div>
           </div>
         </div>
       )}
 
       {/* Control Panel */}
-      <div className="absolute top-4 right-4 z-[1100] w-64 bg-black/90 border border-cyan-500/30 rounded-lg shadow-[0_0_20px_rgba(6,182,212,0.2)]">
+      <div className="absolute top-102 left-4 z-[1100] w-64 bg-black/90 border border-cyan-500/30 rounded-lg shadow-[0_0_20px_rgba(6,182,212,0.2)]">
         {/* Header */}
         <div className="p-2.5 border-b border-cyan-500/20 flex items-center justify-between">
           <div className="text-cyan-400 font-mono font-bold text-xs flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-pulse"></div>
+            <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse"></div>
             SIMILARITY
           </div>
           {onClose && (
@@ -342,7 +383,7 @@ export default function Similarity({ onClose }: Props) {
               htmlFor="pattern-upload"
               className="block w-full py-2 px-3 border border-cyan-500/30 rounded text-center text-cyan-400 text-[10px] font-mono cursor-pointer hover:bg-cyan-500/10 transition-all"
             >
-              {patternImage ? '✓ Pattern Loaded' : '📁 Upload Pattern'}
+              {patternImage ? '✓ Pattern Loaded' : 'Upload Pattern'}
             </label>
 
             {patternImage && (
@@ -373,7 +414,7 @@ export default function Similarity({ onClose }: Props) {
           <button
             onClick={handleCalculate}
             disabled={loading || !patternImage}
-            className="w-full py-2 bg-purple-500/20 border border-purple-500/50 rounded text-purple-400 text-[11px] font-mono hover:bg-purple-500/30 transition-all disabled:opacity-50 font-bold"
+            className="w-full py-2 bg-cyan-500/20 border border-cyan-500/50 rounded text-cyan-400 text-[11px] font-mono hover:bg-cyan-500/30 transition-all disabled:opacity-50 font-bold"
           >
             {loading ? '⟳ CALCULATING...' : '▶ CALCULATE'}
           </button>
@@ -383,11 +424,11 @@ export default function Similarity({ onClose }: Props) {
             <button
               onClick={() => setShowOverlay(!showOverlay)}
               className={`w-full py-2 border rounded text-[11px] font-mono transition-all font-bold ${showOverlay
-                  ? 'bg-red-500/20 border-red-500/50 text-red-400 hover:bg-red-500/30'
-                  : 'bg-green-500/20 border-green-500/50 text-green-400 hover:bg-green-500/30'
+                ? 'bg-red-500/20 border-red-500/50 text-red-400 hover:bg-red-500/30'
+                : 'bg-cyan-500/20 border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/30'
                 }`}
             >
-              {showOverlay ? '👁️ HIDE MATRIX' : '👁️ SHOW MATRIX'}
+              {showOverlay ? 'HIDE MATRIX' : 'SHOW MATRIX'}
             </button>
           )}
 
@@ -403,13 +444,13 @@ export default function Similarity({ onClose }: Props) {
             <div className="space-y-2">
               {/* Metric Selector */}
               <div className="flex gap-1">
-                {(['average', 'color', 'brightness', 'hog'] as const).map((metric) => (
+                {(['color', 'brightness', 'hog'] as const).map((metric) => (
                   <button
                     key={metric}
                     onClick={() => setSelectedMetric(metric)}
                     className={`flex-1 py-1 rounded text-[9px] font-mono transition-all ${selectedMetric === metric
-                        ? 'bg-purple-500/30 border border-purple-500/60 text-purple-300'
-                        : 'bg-black/40 border border-purple-500/20 text-purple-400/60 hover:border-purple-500/40'
+                      ? 'bg-cyan-500/30 border border-cyan-500/60 text-cyan-300'
+                      : 'bg-black/40 border border-cyan-500/20 text-cyan-400/60 hover:border-cyan-500/40'
                       }`}
                   >
                     {metric.toUpperCase()}
@@ -417,44 +458,27 @@ export default function Similarity({ onClose }: Props) {
                 ))}
               </div>
 
-            {/* Stats */}
-            <div className="text-[9px] font-mono text-cyan-400/60 p-2 bg-black/50 border border-cyan-500/30 rounded">
-              <div className="flex justify-between mb-1">
-                <span>Max:</span>
-                <span className="text-cyan-400 font-bold">
-                  {(Math.max(...result.scores[selectedMetric].flat()) * 100).toFixed(1)}%
-                </span>
-              </div>
-              <div className="flex justify-between mb-2">
-                <span>Avg:</span>
-                <span className="text-cyan-400 font-bold">
-                  {(result.scores[selectedMetric].flat().reduce((a, b) => a + b, 0) / 
-                    (result.grid_size * result.grid_size) * 100).toFixed(1)}%
-                </span>
-              </div>
-              
-              {/* Color Legend */}
-              <div className="pt-2 border-t border-cyan-500/30">
-                <div className="text-[8px] text-cyan-400/70 mb-1">Color Scale:</div>
-                <div className="flex h-3 rounded overflow-hidden">
-                  <div className="flex-1" style={{ backgroundColor: 'rgb(255, 255, 0)' }}></div>
-                  <div className="flex-1" style={{ backgroundColor: 'rgb(192, 192, 64)' }}></div>
-                  <div className="flex-1" style={{ backgroundColor: 'rgb(128, 128, 128)' }}></div>
-                  <div className="flex-1" style={{ backgroundColor: 'rgb(64, 128, 192)' }}></div>
-                  <div className="flex-1" style={{ backgroundColor: 'rgb(0, 128, 255)' }}></div>
-                  <div className="flex-1" style={{ backgroundColor: 'rgb(0, 192, 128)' }}></div>
-                  <div className="flex-1" style={{ backgroundColor: 'rgb(0, 255, 0)' }}></div>
-                </div>
-                <div className="flex justify-between text-[7px] text-cyan-400/50 mt-0.5">
-                  <span>0% (Yellow)</span>
-                  <span>50% (Blue)</span>
-                  <span>100% (Green)</span>
+              {/* Color Legend - Horizontal */}
+              <div className="text-[9px] font-mono text-cyan-400/60 p-2 bg-black/50 border border-cyan-500/30 rounded">
+                <div className="text-[8px] text-cyan-400/70 mb-1.5">Color Scale:</div>
+                <div className="flex items-center gap-1">
+                  <div className="flex-1">
+                    <div className="h-4 rounded" style={{ backgroundColor: 'rgb(220, 40, 40)' }}></div>
+                    <div className="text-[7px] text-center mt-0.5">Low</div>
+                  </div>
+                  <div className="flex-1">
+                    <div className="h-4 rounded" style={{ backgroundColor: 'rgb(220, 200, 0)' }}></div>
+                    <div className="text-[7px] text-center mt-0.5">Mid</div>
+                  </div>
+                  <div className="flex-1">
+                    <div className="h-4 rounded" style={{ backgroundColor: 'rgb(40, 180, 40)' }}></div>
+                    <div className="text-[7px] text-center mt-0.5">High</div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
       </div>
     </>
   );

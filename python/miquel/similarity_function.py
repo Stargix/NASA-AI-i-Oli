@@ -3,7 +3,7 @@ import numpy as np
 from skimage.feature import hog
 from skimage import color
 
-def compare_images_grid(img1, img2, grid_size=10, hist_bins=32, method=cv2.HISTCMP_CORREL, method_type="color", automatic_grid_size=False):
+def compare_images_grid(img1, img2, grid_size=10, hist_bins=32, method=cv2.HISTCMP_CORREL, method_type="color", automatic_grid_size=False, max_size=2000):
     """
     Compare two images by subdividing img1 into grid_size×grid_size zones,
     computing a descriptor for each zone, comparing it to img2 descriptor,
@@ -16,10 +16,24 @@ def compare_images_grid(img1, img2, grid_size=10, hist_bins=32, method=cv2.HISTC
         hist_bins (int): Number of bins for histogram (default 32).
         method (int): OpenCV histogram comparison method (only for color/brightness).
         method_type (str): "color", "brightness", or "hog".
+        max_size (int): Maximum dimension (width or height) to resize images to for performance (default 2000).
 
     Returns:
         scores (list of lists): grid_size×grid_size matrix of similarity scores.
     """
+    # Downsize images to max_size for performance
+    def resize_if_needed(img, max_dimension=max_size):
+        h, w = img.shape[:2]
+        if max(h, w) > max_dimension:
+            scale = max_dimension / max(h, w)
+            new_w = int(w * scale)
+            new_h = int(h * scale)
+            return cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
+        return img
+    
+    img1 = resize_if_needed(img1)
+    img2 = resize_if_needed(img2)
+    
     scores = []
     h1, w1 = img1.shape[:2]
 
@@ -79,13 +93,32 @@ def compare_images_grid(img1, img2, grid_size=10, hist_bins=32, method=cv2.HISTC
             row_scores.append(score)
         scores.append(row_scores)
 
+    # Replace any nan or inf values with 0
+    for i in range(grid_size):
+        for j in range(grid_size):
+            if not np.isfinite(scores[i][j]):
+                scores[i][j] = 0.0
+
     # Normalize scores to 0–1 range
     min_score = min(min(row) for row in scores)
     max_score = max(max(row) for row in scores)
+    
+    # Check if min_score and max_score are finite
+    if not np.isfinite(min_score) or not np.isfinite(max_score):
+        return [[0.0] * grid_size for _ in range(grid_size)]
+    
     for i in range(grid_size):
         for j in range(grid_size):
-            scores[i][j] = (scores[i][j] - min_score) / (max_score - min_score) if max_score > min_score else 0
-            scores[i][j] = round(scores[i][j], 4)
+            if max_score > min_score:
+                scores[i][j] = (scores[i][j] - min_score) / (max_score - min_score)
+            else:
+                scores[i][j] = 0.0
+            
+            # Ensure the final value is finite and convert to float
+            if not np.isfinite(scores[i][j]):
+                scores[i][j] = 0.0
+            else:
+                scores[i][j] = round(float(scores[i][j]), 4)
 
     return scores
 
@@ -109,7 +142,10 @@ def average_scores(scores1, scores2, scores3):
         row = []
         for j in range(grid_size):
             avg = (scores1[i][j] + scores2[i][j] + scores3[i][j]) / 3.0
-            row.append(round(avg, 4))
+            # Ensure the average is finite
+            if not np.isfinite(avg):
+                avg = 0.0
+            row.append(round(float(avg), 4))
         averaged_scores.append(row)
     
     return averaged_scores
@@ -117,7 +153,7 @@ def average_scores(scores1, scores2, scores3):
 
 def visualize_scores(scores, title="Similarity Heatmap", cell_size=50):
     """
-    Visualize similarity scores as a colored heatmap.
+    Visualize similarity scores as a colored heatmap with a modern, space-themed color palette.
     
     Args:
         scores (list of lists): grid_size×grid_size matrix of similarity scores (0-1 range).
@@ -125,44 +161,75 @@ def visualize_scores(scores, title="Similarity Heatmap", cell_size=50):
         cell_size (int): Size of each cell in pixels (default 50).
     
     Returns:
-        np.array: The heatmap image.
+        np.array: The heatmap image with alpha channel (RGBA).
     """
     grid_size = len(scores)
-    heatmap = np.zeros((grid_size * cell_size, grid_size * cell_size, 3), dtype=np.uint8)
+    heatmap = np.zeros((grid_size * cell_size, grid_size * cell_size, 4), dtype=np.uint8)
+    
+    # Smooth, natural gradient: Orange → Yellow → Light Green → Green
+    # Warm to cool color transition
+    def get_modern_color(score):
+        """
+        Get a soft, natural color for the given score with smooth gradients.
+        Orange (low) to Green (high) transition.
+        Returns (B, G, R, A) in OpenCV format with alpha channel.
+        """
+        # Clamp score between 0 and 1
+        score = max(0.0, min(1.0, score))
+        
+        # Use smooth polynomial interpolation for more natural transitions
+        def smooth_lerp(a, b, t):
+            # Smoothstep function for smoother transitions
+            t = t * t * (3 - 2 * t)
+            return int(a + (b - a) * t)
+        
+        if score < 0.5:
+            # Soft orange (80, 170, 255) → Yellow (100, 230, 255)
+            t = score / 0.5
+            b = smooth_lerp(80, 100, t)
+            g = smooth_lerp(170, 230, t)
+            r = smooth_lerp(255, 255, t)
+            a = 230
+            
+        else:
+            # Yellow (100, 230, 255) → Bright green (120, 220, 140)
+            t = (score - 0.5) / 0.5
+            b = smooth_lerp(100, 120, t)
+            g = smooth_lerp(230, 220, t)
+            r = smooth_lerp(255, 140, t)
+            a = 255
+        
+        return (b, g, r, a)
     
     for i in range(grid_size):
         for j in range(grid_size):
             score = scores[i][j]
-            # Convert score (0-1) to color using a colormap
-            # 0 = blue (cold/low similarity), 1 = red (hot/high similarity)
-            color_value = int(score * 255)
             
-            # Create a color gradient from blue to green to red
-            if score < 0.5:
-                # Blue to green
-                b = int(255 * (1 - score * 2))
-                g = int(255 * score * 2)
-                r = 0
-            else:
-                # Green to red
-                b = 0
-                g = int(255 * (1 - (score - 0.5) * 2))
-                r = int(255 * (score - 0.5) * 2)
+            # Get modern color with alpha
+            b, g, r, a = get_modern_color(score)
             
             # Fill the cell with the color
             y1, y2 = i * cell_size, (i + 1) * cell_size
             x1, x2 = j * cell_size, (j + 1) * cell_size
-            heatmap[y1:y2, x1:x2] = (b, g, r)
+            heatmap[y1:y2, x1:x2] = (b, g, r, a)
+            
+            # Add subtle border for better cell definition
+            cv2.rectangle(heatmap, (x1, y1), (x2-1, y2-1), (200, 200, 200, 100), 1)
             
             # Add text with the score value
             text = f"{score:.2f}"
             font = cv2.FONT_HERSHEY_SIMPLEX
-            font_scale = 0.4
+            font_scale = 0.35
             thickness = 1
+            
+            # Choose text color based on background brightness
+            brightness = (b + g + r) / 3
+            text_color = (30, 30, 30, 255) if brightness > 120 else (255, 255, 255, 255)
+            
             text_size = cv2.getTextSize(text, font, font_scale, thickness)[0]
             text_x = x1 + (cell_size - text_size[0]) // 2
             text_y = y1 + (cell_size + text_size[1]) // 2
-            cv2.putText(heatmap, text, (text_x, text_y), font, font_scale, (255, 255, 255), thickness)
+            cv2.putText(heatmap, text, (text_x, text_y), font, font_scale, text_color, thickness, cv2.LINE_AA)
     
     cv2.imshow(title, heatmap)
     return heatmap

@@ -332,7 +332,7 @@ export default function Home() {
                     setShowSimilarity(!showSimilarity);
                     if (!showSimilarity) setShowConstellations(false); // Cierra Constellations al abrir Similarity
                   }}
-                  className="px-3 py-1.5 sm:px-4 sm:py-2 border border-purple-500/50 rounded text-purple-400 text-xs sm:text-sm font-mono bg-purple-500/10 hover:bg-purple-500/20 transition-all duration-300 hover:shadow-[0_0_10px_rgba(168,85,247,0.3)]"
+                  className="px-3 py-1.5 sm:px-4 sm:py-2 border border-cyan-500/50 rounded text-cyan-400 text-xs sm:text-sm font-mono bg-cyan-500/10 hover:bg-cyan-500/20 transition-all duration-300 hover:shadow-[0_0_10px_rgba(6,182,212,0.3)]"
                 >
                   SIMILARITY
                 </button>
