@@ -23,7 +23,7 @@ export default function Similarity({ onClose }: Props) {
   const [gridSize, setGridSize] = useState(10);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<SimilarityResult | null>(null);
-  const [selectedMetric, setSelectedMetric] = useState<'color' | 'brightness' | 'hog'>('color');
+  const [selectedMetric, setSelectedMetric] = useState<'color' | 'brightness' | 'hog' | 'average'>('color');
   const [error, setError] = useState<string | null>(null);
   const [showOverlay, setShowOverlay] = useState(false);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
