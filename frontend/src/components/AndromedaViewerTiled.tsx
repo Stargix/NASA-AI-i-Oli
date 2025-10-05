@@ -210,7 +210,7 @@ export default function AndromedaViewerTiled() {
 
         // Actualizar estado inicial
         updateViewerState();
-        
+
         // Actualizar estado en cada zoom
         map.on('zoomend', () => {
             updateViewerState();
@@ -240,27 +240,27 @@ export default function AndromedaViewerTiled() {
                 }}
             />
 
-            {/* Panel de información cyber - Compacto */}
-            <div className="absolute top-14 left-4 z-[1000] bg-black/80 backdrop-blur-md border border-cyan-500/30 rounded-lg p-2 font-mono text-xs shadow-[0_0_20px_rgba(6,182,212,0.3)]">
-                <div className="flex flex-col gap-1">
-                    <div className="text-cyan-400 font-bold text-[10px] mb-1 border-b border-cyan-500/30 pb-1 flex items-center gap-1.5">
+            {/* Panel de información cyber - Ancho fijo para evitar solapamiento */}
+            <div className="absolute top-20 sm:top-24 left-4 z-[1000] w-40 sm:w-44 bg-black/80 backdrop-blur-md border border-cyan-500/30 rounded-lg p-2.5 sm:p-3 font-mono shadow-[0_0_20px_rgba(6,182,212,0.3)]">
+                <div className="flex flex-col gap-1.5">
+                    <div className="text-cyan-400 font-bold text-[11px] sm:text-xs mb-1 border-b border-cyan-500/30 pb-1 flex items-center gap-1.5">
                         <span className="inline-block w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse"></span>
                         TELEMETRY
                     </div>
-                    <div className="flex justify-between gap-4 text-[10px]">
+                    <div className="flex justify-between gap-2 text-[11px] sm:text-xs">
                         <span className="text-cyan-400/60">ZOOM:</span>
                         <span className="text-cyan-400 font-bold">{zoom.toFixed(1)}</span>
                     </div>
-                    <div className="flex justify-between gap-4 text-[10px]">
+                    <div className="flex justify-between gap-2 text-[11px] sm:text-xs">
                         <span className="text-cyan-400/60">X:</span>
                         <span className="text-cyan-400 font-bold">{coordinates.x.toLocaleString()}</span>
                     </div>
-                    <div className="flex justify-between gap-4 text-[10px]">
+                    <div className="flex justify-between gap-2 text-[11px] sm:text-xs">
                         <span className="text-cyan-400/60">Y:</span>
                         <span className="text-cyan-400 font-bold">{coordinates.y.toLocaleString()}</span>
                     </div>
                     <div className="mt-1 pt-1 border-t border-cyan-500/30">
-                        <div className="text-[8px] text-cyan-400/40">
+                        <div className="text-[9px] sm:text-[10px] text-cyan-400/40">
                             {loading
                                 ? `Loading: ${tilesLoaded}/${totalTiles}`
                                 : isZoomLoading
@@ -278,23 +278,23 @@ export default function AndromedaViewerTiled() {
                 </div>
             )}
 
-            {/* Controles adicionales - Compactos */}
-            <div className="absolute top-14 right-4 z-[1000] flex flex-col gap-1">
+            {/* Controles adicionales - Tamaño moderado */}
+            <div className="absolute top-20 sm:top-24 right-4 z-[1000] flex flex-col gap-1.5">
                 <button
                     onClick={() => mapRef.current?.zoomIn()}
-                    className="bg-black/80 backdrop-blur-md border border-cyan-500/30 rounded p-1.5 text-cyan-400 hover:bg-cyan-500/20 transition-all duration-300"
+                    className="bg-black/80 backdrop-blur-md border border-cyan-500/30 rounded p-2 text-cyan-400 hover:bg-cyan-500/20 hover:shadow-[0_0_10px_rgba(6,182,212,0.3)] transition-all duration-300"
                     title="Zoom In"
                 >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                 </button>
                 <button
                     onClick={() => mapRef.current?.zoomOut()}
-                    className="bg-black/80 backdrop-blur-md border border-cyan-500/30 rounded p-1.5 text-cyan-400 hover:bg-cyan-500/20 transition-all duration-300"
+                    className="bg-black/80 backdrop-blur-md border border-cyan-500/30 rounded p-2 text-cyan-400 hover:bg-cyan-500/20 hover:shadow-[0_0_10px_rgba(6,182,212,0.3)] transition-all duration-300"
                     title="Zoom Out"
                 >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
                     </svg>
                 </button>
@@ -310,10 +310,10 @@ export default function AndromedaViewerTiled() {
                             });
                         }
                     }}
-                    className="bg-black/80 backdrop-blur-md border border-cyan-500/30 rounded p-1.5 text-cyan-400 hover:bg-cyan-500/20 transition-all duration-300"
+                    className="bg-black/80 backdrop-blur-md border border-cyan-500/30 rounded p-2 text-cyan-400 hover:bg-cyan-500/20 hover:shadow-[0_0_10px_rgba(6,182,212,0.3)] transition-all duration-300"
                     title="Reset View"
                 >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
                     </svg>
                 </button>

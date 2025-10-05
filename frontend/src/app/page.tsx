@@ -87,36 +87,33 @@ export default function Home() {
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-black">
-      {/* Header cyber NASA - Compacto */}
+      {/* Header cyber NASA - Responsive */}
       <header className="absolute top-0 left-0 right-0 z-[1000] bg-gradient-to-b from-black/90 via-black/70 to-transparent backdrop-blur-sm border-b border-cyan-500/30">
-        <div className="flex items-center justify-between px-3 py-2">
-          <div className="flex items-center gap-2">
-            <div className="text-cyan-400 font-bold text-lg tracking-wider font-mono">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-2.5 sm:py-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="text-cyan-400 font-bold text-lg sm:text-xl tracking-wider font-mono">
               NASA
             </div>
-            <div className="h-5 w-px bg-cyan-500/50"></div>
-            <h1 className="text-white font-mono text-sm tracking-wide">
+            <div className="h-5 sm:h-6 w-px bg-cyan-500/50"></div>
+            <h1 className="text-white font-mono text-sm sm:text-base tracking-wide">
               {customImage ? 'CUSTOM EXPLORER' : 'ANDROMEDA'}
             </h1>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handleLoadNewImage}
-              className="px-2 py-1 border border-cyan-500/50 rounded text-cyan-400 text-[10px] font-mono bg-cyan-500/10 hover:bg-cyan-500/20 transition-all duration-300"
+              className="px-3 py-1.5 sm:px-4 sm:py-2 border border-cyan-500/50 rounded text-cyan-400 text-xs sm:text-sm font-mono bg-cyan-500/10 hover:bg-cyan-500/20 transition-all duration-300 hover:shadow-[0_0_10px_rgba(6,182,212,0.3)]"
             >
               UPLOAD
             </button>
             {customImage && (
               <button
                 onClick={handleReset}
-                className="px-2 py-1 border border-cyan-500/50 rounded text-cyan-400 text-[10px] font-mono bg-cyan-500/10 hover:bg-cyan-500/20 transition-all duration-300"
+                className="px-3 py-1.5 sm:px-4 sm:py-2 border border-cyan-500/50 rounded text-cyan-400 text-xs sm:text-sm font-mono bg-cyan-500/10 hover:bg-cyan-500/20 transition-all duration-300 hover:shadow-[0_0_10px_rgba(6,182,212,0.3)]"
               >
                 ANDROMEDA
               </button>
             )}
-            <div className="px-2 py-0.5 border border-cyan-500/50 rounded text-cyan-400 text-[9px] font-mono bg-cyan-500/10">
-              {customImage ? 'CUSTOM' : 'M31'}
-            </div>
           </div>
         </div>
       </header>
@@ -139,7 +136,7 @@ export default function Home() {
         />
       )}
 
-       {/* Bounding Box Overlay */}
+      {/* Bounding Box Overlay */}
       {!customImage && detectionResult && detectionResult.bounding_box_list && (
         <BoundingBoxOverlay
           boxes={detectionResult.bounding_box_list}

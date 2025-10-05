@@ -219,28 +219,28 @@ export default function Toolbox({ onResult }: Props) {
         { center: [centerX + 150, centerY - 50], height: 80, width: 80, color: 'blue', obj_type: 'star' },
         { center: [centerX - 100, centerY + 150], height: 60, width: 60, color: 'red', obj_type: 'star' },
         { center: [centerX + 200, centerY + 100], height: 70, width: 70, color: 'blue', obj_type: 'star' },
-        
+
         // Galaxias
         { center: [centerX - 300, centerY], height: 100, width: 80, color: 'red', obj_type: 'galaxy' },
         { center: [centerX + 250, centerY - 200], height: 120, width: 90, color: 'red', obj_type: 'galaxy' },
         { center: [centerX, centerY + 250], height: 110, width: 85, color: 'blue', obj_type: 'galaxy' },
-        
+
         // Clusters más grandes
         { center: [centerX - 400, centerY - 300], height: 200, width: 180, color: 'red', obj_type: 'cluster' },
         { center: [centerX + 350, centerY + 200], height: 250, width: 220, color: 'blue', obj_type: 'cluster' },
         { center: [centerX, centerY - 350], height: 180, width: 160, color: 'red', obj_type: 'cluster' },
-        
+
         // Más estrellas dispersas
         { center: [centerX + 100, centerY], height: 55, width: 55, color: 'blue', obj_type: 'star' },
         { center: [centerX - 150, centerY - 200], height: 65, width: 65, color: 'red', obj_type: 'star' },
         { center: [centerX + 300, centerY - 100], height: 45, width: 45, color: 'blue', obj_type: 'star' },
         { center: [centerX - 250, centerY + 200], height: 75, width: 75, color: 'red', obj_type: 'star' },
-        
+
         // Objeto en el centro exacto para referencia
         { center: [centerX, centerY], height: 100, width: 100, color: 'blue', obj_type: 'cluster' },
       ]
     };
-    
+
     console.log('🎭 DEMO mode: Using sample data at center', { centerX, centerY });
     setResult(demoData);
     setCachedResult(demoData);
@@ -262,7 +262,7 @@ export default function Toolbox({ onResult }: Props) {
         }
       `}</style>
       <div
-        className="absolute top-[170px] left-4 z-[1100] w-64 bg-black/90 border border-cyan-500/30 rounded-lg shadow-[0_0_20px_rgba(6,182,212,0.2)] transition-all duration-300"
+        className="absolute top-[260px] left-4 z-[1100] w-64 bg-black/90 border border-cyan-500/30 rounded-lg shadow-[0_0_20px_rgba(6,182,212,0.2)] transition-all duration-300"
       >
         {/* Header compacto */}
         <div className="p-2.5 border-b border-cyan-500/20">
