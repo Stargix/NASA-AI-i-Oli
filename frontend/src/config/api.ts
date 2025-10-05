@@ -1,7 +1,7 @@
 // API Configuration
 // Change this URL based on environment
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://nasa-ai-i-oli.onrender.com';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '187.33.157.217';
 
 // API Endpoints
 export const API_ENDPOINTS = {
