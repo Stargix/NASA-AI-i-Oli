@@ -197,6 +197,32 @@ export default function Toolbox({ onResult, onCaptureView }: Props) {
     };
   }, [runAutoDetection]);
 
+  // Escuchar evento de limpieza global
+  useEffect(() => {
+    const handleClearDetections = () => {
+      console.log('🧹 Toolbox: Clearing detections from global event');
+      setResult(null);
+      setCachedResult(null);
+      setIsAutoDetecting(false);
+
+      // Limpiar también el timer de auto-detección
+      if (autoDetectionTimerRef.current) {
+        clearTimeout(autoDetectionTimerRef.current);
+        autoDetectionTimerRef.current = null;
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('clearDetections', handleClearDetections);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('clearDetections', handleClearDetections);
+      }
+    };
+  }, []);
+
   // Función para cuando el usuario pulsa el botón Run (muestra resultados)
   const runDetection = async () => {
     setRunning(true);
@@ -322,8 +348,8 @@ export default function Toolbox({ onResult, onCaptureView }: Props) {
                   {running ? '⟳ RUN...' : '▶ RUN'}
                 </button>
                 <button
-                  onClick={() => { 
-                    setResult(null); 
+                  onClick={() => {
+                    setResult(null);
                     setCachedResult(null);
                     // Limpiar las bounding boxes globales
                     if (typeof window !== 'undefined') {
@@ -464,8 +490,8 @@ export default function Toolbox({ onResult, onCaptureView }: Props) {
                   {running ? '⟳ PROCESSING...' : '▶ RUN DETECTION'}
                 </button>
                 <button
-                  onClick={() => { 
-                    setResult(null); 
+                  onClick={() => {
+                    setResult(null);
                     setCachedResult(null);
                     // Limpiar las bounding boxes globales
                     if (typeof window !== 'undefined') {

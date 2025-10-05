@@ -48,7 +48,13 @@ export default function Home() {
   const clearBoundingBoxes = () => {
     setDetectionResult(null);
     setShowBoundingBoxes(false);
-    console.log('🧹 Bounding boxes cleared');
+    console.log('🧹 Bounding boxes cleared from page.tsx');
+
+    // Emitir evento para que Toolbox también limpie su estado
+    if (typeof window !== 'undefined') {
+      const event = new CustomEvent('clearDetections');
+      window.dispatchEvent(event);
+    }
   };
 
   // Exponer la función globalmente para que Toolbox pueda llamarla
