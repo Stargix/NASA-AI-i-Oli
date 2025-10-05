@@ -69,11 +69,12 @@ def process_image(image, gaussian_blur=25,
     # Do an erosion before eliminating small components to break up thin connections
     if automated:
 
-        # Safety check: is the smallest component area smaller than min_size?
+        # Safety check: is the biggest component area smaller than min_size?
         # Get components:
         n, labels, stats, _ = cv2.connectedComponentsWithStats(mask)
-        if n > 1 and np.min(stats[1:, cv2.CC_STAT_AREA]) < min_size:
+        if n > 1 and np.max(stats[1:, cv2.CC_STAT_AREA]) < min_size:
             min_size = 1
+            print("Warning: biggest component area is smaller than min_size, setting min_size to 1")
 
         separation_threshold = int(np.sqrt(min_size))
         if separation_threshold < 3:
@@ -92,8 +93,11 @@ def process_image(image, gaussian_blur=25,
     n, labels, stats, _ = cv2.connectedComponentsWithStats(mask)
 
     # Let's select the min size depending on the biggest detected component
+    print(n, stats.shape)
     if automated:
         min_size = (max(stats[1:, cv2.CC_STAT_AREA])/1000) if n > 1 else 1
+
+    print("Using min size:", min_size)
 
     # eliminate small components
     large_mask = np.zeros_like(mask)
@@ -334,7 +338,7 @@ def contextualize_dataset(objects, n_samples=500):
 if __name__ == "__main__":
     import time
 
-    small_path = "C:\\Users\\mique\\Downloads\\NASA-AI-i-Oli\\python\\miquel\\test_images\\webb.jpg"
+    small_path = "C:\\Natalia\\Trabajo\\Estudios\\5_Inteligencia_Artificial\\NASA_2025\\NASA-AI-i-Oli\\python\\miquel\\test_images\\image.png"
 
     OG_img = cv2.imread(small_path)
 
