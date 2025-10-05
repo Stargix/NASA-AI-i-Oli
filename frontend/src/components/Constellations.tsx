@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { API_ENDPOINTS } from '@/config/api';
 
 interface Props {
   onClose?: () => void;
@@ -43,7 +44,7 @@ export default function Constellations({ onClose, detectedCentroids, onConstella
         console.log(`✅ Detection completed: ${detectedCents.length} stars found`);
       }
 
-      const response = await fetch('http://localhost:8000/constellation/search', {
+      const response = await fetch(API_ENDPOINTS.constellationSearch, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -93,7 +94,7 @@ export default function Constellations({ onClose, detectedCentroids, onConstella
         console.log(`✅ Detection completed: ${detectedCents.length} stars found`);
       }
 
-      const response = await fetch('http://localhost:8000/constellation/draw', {
+      const response = await fetch(API_ENDPOINTS.constellationDraw, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

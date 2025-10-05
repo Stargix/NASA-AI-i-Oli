@@ -12,6 +12,7 @@ import Similarity from '@/components/Similarity';
 import Constellations from '@/components/Constellations';
 import { AndromedaViewerRef } from '@/components/AndromedaViewerTiled';
 import { DynamicViewerRef } from '@/components/DynamicImageViewer';
+import { API_ENDPOINTS } from '@/config/api';
 
 
 // Importar los componentes de forma dinámica para evitar SSR issues
@@ -172,7 +173,7 @@ export default function Home() {
       };
 
       console.log('🔍 Running star detection with payload:', payload);
-      const response = await fetch('http://localhost:8000/star_analysis', {
+      const response = await fetch(API_ENDPOINTS.starAnalysis, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -242,7 +243,7 @@ export default function Home() {
     if (!isChatOpen) {
       setIsChatOpen(true);
     } try {
-      const response = await fetch('http://localhost:8000/chat', {
+      const response = await fetch(API_ENDPOINTS.chat, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: query, images }),

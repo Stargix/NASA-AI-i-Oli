@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { API_ENDPOINTS } from '@/config/api';
 
 interface SimilarityScores {
   color: number[][];
@@ -262,7 +263,7 @@ export default function Similarity({ onClose }: Props) {
     try {
       const targetImageUrl = `${window.location.origin}/andromeda.jpg`;
 
-      const response = await fetch('http://localhost:8000/similarity', {
+      const response = await fetch(API_ENDPOINTS.similarity, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { API_ENDPOINTS } from '@/config/api';
 
 interface Props {
   onResult?: (data: any) => void;
@@ -157,7 +158,7 @@ export default function Toolbox({ onResult, onCaptureView }: Props) {
     };
 
     console.log('Toolbox: About to fetch /star_analysis', payload);
-    const resp = await fetch('http://localhost:8000/star_analysis', {
+    const resp = await fetch(API_ENDPOINTS.starAnalysis, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
