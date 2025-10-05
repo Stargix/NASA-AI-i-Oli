@@ -43,6 +43,7 @@ export default function Home() {
   const [isQueryLoading, setIsQueryLoading] = useState(false);
   const [detectionResult, setDetectionResult] = useState<any>(null);
   const [showBoundingBoxes, setShowBoundingBoxes] = useState(false);
+  const [constellationMatchedIndices, setConstellationMatchedIndices] = useState<number[] | undefined>(undefined);
 
   // Chat state
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -59,12 +60,22 @@ export default function Home() {
   const clearBoundingBoxes = () => {
     setDetectionResult(null);
     setShowBoundingBoxes(false);
+    setConstellationMatchedIndices(undefined);
     console.log('🧹 Bounding boxes cleared from page.tsx');
 
     // Emitir evento para que Toolbox también limpie su estado
     if (typeof window !== 'undefined') {
       const event = new CustomEvent('clearDetections');
       window.dispatchEvent(event);
+    }
+  };
+
+  // Función para manejar cuando se encuentra una constelación
+  const handleConstellationMatch = (matchResult: any) => {
+    console.log('🌟 Constellation match received:', matchResult);
+    if (matchResult.success && matchResult.matched_indices) {
+      setConstellationMatchedIndices(matchResult.matched_indices);
+      setShowBoundingBoxes(true);
     }
   };
 
@@ -97,7 +108,75 @@ export default function Home() {
   const handleDetectionResult = (result: any) => {
     setDetectionResult(result);
     setShowBoundingBoxes(true);
+    setConstellationMatchedIndices(undefined); // Limpiar filtro de constelación cuando hay nueva detección
     console.log('Detection result received:', result);
+  };
+
+  // Función para ejecutar detección si no existe
+  const runDetectionIfNeeded = async (): Promise<Array<[number, number]> | null> => {
+    // Si ya hay detección, devolver los centroids existentes
+    if (detectionResult && detectionResult.bounding_box_list) {
+      console.log('✅ Detection already exists, returning centroids...');
+      return detectionResult.bounding_box_list.map((box: any) => box.center as [number, number]);
+    }
+
+    console.log('🔍 No detection found, running star detection...');
+
+    try {
+      // Capturar screenshot actual
+      let imageUrl = '';
+      if (andromedaViewerRef.current) {
+        imageUrl = await andromedaViewerRef.current.captureCurrentView();
+      }
+
+      if (!imageUrl) {
+        // Fallback a la imagen completa si no se puede capturar
+        imageUrl = `${window.location.origin}/andromeda.jpg`;
+      }
+
+      // Ejecutar detección automática
+      const payload = {
+        image: imageUrl,
+        top_left: [0, 0],
+        bottom_right: [40000, 10000],
+        automated: true,
+        gaussian_blur: 25,
+        noise_threshold: 120,
+        adaptative_filtering: false,
+        separation_threshold: 3,
+        min_size: 20,
+        max_components: 1000,
+        detect_clusters: false,
+      };
+
+      console.log('🔍 Running star detection with payload:', payload);
+      const response = await fetch('http://localhost:8000/star_analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Detection failed: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Detection completed:', data);
+
+      // Actualizar estado con los resultados
+      setDetectionResult(data);
+      setShowBoundingBoxes(true);
+
+      // Devolver los centroids
+      if (data.bounding_box_list) {
+        return data.bounding_box_list.map((box: any) => box.center as [number, number]);
+      }
+
+      return null;
+    } catch (err) {
+      console.error('❌ Error running detection:', err);
+      return null;
+    }
   };
 
   const handleQuery = async (query: string, attachedImages?: File[]) => {
@@ -269,8 +348,12 @@ export default function Home() {
         <BoundingBoxOverlay
           boxes={detectionResult.bounding_box_list}
           visible={showBoundingBoxes}
-          onClose={() => setShowBoundingBoxes(false)}
+          onClose={() => {
+            setShowBoundingBoxes(false);
+            setConstellationMatchedIndices(undefined);
+          }}
           isScreenshotBased={true}
+          matchedIndices={constellationMatchedIndices}
         />
       )}
 
@@ -281,7 +364,14 @@ export default function Home() {
 
       {/* Constellations Panel */}
       {!customImage && showConstellations && (
-        <Constellations onClose={() => setShowConstellations(false)} />
+        <Constellations
+          onClose={() => setShowConstellations(false)}
+          detectedCentroids={
+            detectionResult?.bounding_box_list?.map((box: any) => box.center as [number, number])
+          }
+          onConstellationMatch={handleConstellationMatch}
+          onRequestDetection={runDetectionIfNeeded}
+        />
       )}
 
       {/* Chat Panel */}

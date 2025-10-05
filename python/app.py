@@ -251,7 +251,8 @@ async def constellation_search_endpoint(data: schema.ConstellationSearchRequestS
                 rotation_angle=match['rotation_angle'],
                 scale=match['final_scale'],
                 position=(float(transformed_center[0]), float(transformed_center[1])),
-                transformation_matrix=match['transformation_matrix']
+                transformation_matrix=match['transformation_matrix'],
+                matched_indices=match.get('matched_indices', [])
             )
         else:
             return schema.ConstellationResponseSchema(
@@ -334,7 +335,8 @@ async def constellation_draw_endpoint(data: schema.ConstellationDrawRequestSchem
                 rotation_angle=match['rotation_angle'],
                 scale=match['final_scale'],
                 position=(float(transformed_center[0]), float(transformed_center[1])),
-                transformation_matrix=match['transformation_matrix']
+                transformation_matrix=match['transformation_matrix'],
+                matched_indices=match.get('matched_indices', [])
             )
         else:
             return schema.ConstellationResponseSchema(

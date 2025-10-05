@@ -67,3 +67,4 @@ class ConstellationResponseSchema(BaseModel):
     scale: Optional[float] = None
     position: Optional[Tuple[float, float]] = None
     transformation_matrix: Optional[List[List[float]]] = None
+    matched_indices: Optional[List[int]] = Field(None, description="Indices of the detected stars that match the constellation")

@@ -4,9 +4,12 @@ import { useState } from 'react';
 
 interface Props {
   onClose?: () => void;
+  detectedCentroids?: Array<[number, number]>;
+  onConstellationMatch?: (result: any) => void;
+  onRequestDetection?: () => Promise<Array<[number, number]> | null>;
 }
 
-export default function Constellations({ onClose }: Props) {
+export default function Constellations({ onClose, detectedCentroids, onConstellationMatch, onRequestDetection }: Props) {
   const [constellationName, setConstellationName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,11 +25,30 @@ export default function Constellations({ onClose }: Props) {
     setError(null);
 
     try {
+      // Determinar qué centroids usar
+      let centroidsToUse = detectedCentroids;
+
+      // Si no hay centroids detectados, ejecutar detección primero
+      if ((!centroidsToUse || centroidsToUse.length === 0) && onRequestDetection) {
+        console.log('⚠️ No stars detected, running detection first...');
+        const detectedCents = await onRequestDetection();
+
+        if (!detectedCents || detectedCents.length === 0) {
+          setError('Failed to detect stars. Please try running detection manually.');
+          setLoading(false);
+          return;
+        }
+
+        centroidsToUse = detectedCents;
+        console.log(`✅ Detection completed: ${detectedCents.length} stars found`);
+      }
+
       const response = await fetch('http://localhost:8000/constellation/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           constellation_name: constellationName,
+          detected_centroids: centroidsToUse || [],
         }),
       });
 
@@ -35,6 +57,11 @@ export default function Constellations({ onClose }: Props) {
       const data = await response.json();
       setResult(data);
       console.log('Constellation search result:', data);
+
+      // Notificar al componente padre si hay un match exitoso
+      if (data.success && onConstellationMatch) {
+        onConstellationMatch(data);
+      }
     } catch (err) {
       console.error('Constellation search error:', err);
       setError(String(err));
@@ -48,10 +75,30 @@ export default function Constellations({ onClose }: Props) {
     setError(null);
 
     try {
+      // Determinar qué centroids usar
+      let centroidsToUse = detectedCentroids;
+
+      // Si no hay centroids detectados, ejecutar detección primero
+      if ((!centroidsToUse || centroidsToUse.length === 0) && onRequestDetection) {
+        console.log('⚠️ No stars detected, running detection first...');
+        const detectedCents = await onRequestDetection();
+
+        if (!detectedCents || detectedCents.length === 0) {
+          setError('Failed to detect stars. Please try running detection manually.');
+          setLoading(false);
+          return;
+        }
+
+        centroidsToUse = detectedCents;
+        console.log(`✅ Detection completed: ${detectedCents.length} stars found`);
+      }
+
       const response = await fetch('http://localhost:8000/constellation/draw', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          detected_centroids: centroidsToUse || [],
+        }),
       });
 
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
@@ -59,6 +106,11 @@ export default function Constellations({ onClose }: Props) {
       const data = await response.json();
       setResult(data);
       console.log('Draw constellation result:', data);
+
+      // Notificar al componente padre si hay un match exitoso
+      if (data.success && onConstellationMatch) {
+        onConstellationMatch(data);
+      }
     } catch (err) {
       console.error('Draw constellation error:', err);
       setError(String(err));
@@ -113,6 +165,20 @@ export default function Constellations({ onClose }: Props) {
             }}
           />
         </div>
+
+        {/* Info: No stars detected */}
+        {(!detectedCentroids || detectedCentroids.length === 0) && (
+          <div className="p-2 bg-yellow-500/10 border border-yellow-500/30 rounded text-[9px] text-yellow-400 font-mono">
+            ⚠️ No stars detected yet. Detection will run automatically.
+          </div>
+        )}
+
+        {/* Info: Stars detected */}
+        {detectedCentroids && detectedCentroids.length > 0 && (
+          <div className="p-2 bg-green-500/10 border border-green-500/30 rounded text-[9px] text-green-400 font-mono">
+            ✓ {detectedCentroids.length} stars detected and ready
+          </div>
+        )}
 
         {/* Search Button */}
         <button

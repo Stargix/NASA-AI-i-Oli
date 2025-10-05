@@ -15,9 +15,10 @@ interface Props {
   visible: boolean;
   onClose?: () => void;
   isScreenshotBased?: boolean; // Nueva prop para indicar si las coords son del screenshot
+  matchedIndices?: number[]; // Índices de las boxes que forman parte de una constelación detectada
 }
 
-export default function BoundingBoxOverlay({ boxes, visible, onClose, isScreenshotBased = false }: Props) {
+export default function BoundingBoxOverlay({ boxes, visible, onClose, isScreenshotBased = false, matchedIndices }: Props) {
   const [viewerState, setViewerState] = useState<any>(null);
   const [screenshotDimensions, setScreenshotDimensions] = useState<{ width: number, height: number } | null>(null);
 
@@ -117,17 +118,30 @@ export default function BoundingBoxOverlay({ boxes, visible, onClose, isScreensh
     };
   };
 
+  // Log filtrado si hay matchedIndices
+  console.log('🎯 BoundingBoxOverlay filtering:', {
+    totalBoxes: boxes.length,
+    matchedIndices,
+    filteredCount: matchedIndices ? matchedIndices.length : boxes.length
+  });
+
   return (
     <>
       {/* Overlay de bounding boxes */}
       <div className="absolute inset-0 pointer-events-none z-[900]">
-        {boxes.map((box, index) => {
+        {boxes.map((box, boxIndex) => {
+          // Si hay matchedIndices, solo renderizar si este índice está incluido
+          if (matchedIndices && matchedIndices.length > 0 && !matchedIndices.includes(boxIndex)) {
+            return null;
+          }
+
           const [centerX, centerY] = box.center;
           const { x, y, scale, width: boxWidth, height: boxHeight } = imageToScreen(centerX, centerY, box.width, box.height);
 
-          // Debug primer box
-          if (index === 0) {
-            console.log('📦 First box calculation:', {
+          // Debug primer box que se va a renderizar
+          if (boxIndex === 0 || (matchedIndices && matchedIndices[0] === boxIndex)) {
+            console.log('📦 First rendered box calculation:', {
+              boxIndex,
               box,
               imageCoords: { centerX, centerY },
               screenCoords: { x, y },
@@ -146,25 +160,29 @@ export default function BoundingBoxOverlay({ boxes, visible, onClose, isScreensh
             y - boxHeight / 2 < window.innerHeight;
 
           if (!isVisible) {
-            if (index === 0) console.log('⚠️ First box NOT visible');
             return null;
           }
 
-          if (index === 0) console.log('✅ First box IS visible, rendering...');
+          // Si hay matched_indices, resaltar con color especial para constelación
+          const isConstellationStar = matchedIndices && matchedIndices.length > 0;
 
-          // Color del borde según el color del objeto (azul → verde)
-          const borderColor = box.color === 'red'
-            ? 'rgba(239, 68, 68, 0.9)'
-            : box.color === 'blue'
-              ? 'rgba(34, 197, 94, 0.9)' // Verde en lugar de azul
-              : 'rgba(168, 85, 247, 0.8)';
+          // Color del borde según si es parte de una constelación o no
+          const borderColor = isConstellationStar
+            ? 'rgba(251, 191, 36, 0.9)' // Amarillo/dorado para constelación
+            : box.color === 'red'
+              ? 'rgba(239, 68, 68, 0.9)'
+              : box.color === 'blue'
+                ? 'rgba(34, 197, 94, 0.9)' // Verde en lugar de azul
+                : 'rgba(168, 85, 247, 0.8)';
 
-          // Color de fondo según el tipo
-          const bgColor = box.obj_type === 'star'
-            ? 'rgba(251, 191, 36, 0.15)'
-            : box.obj_type === 'galaxy'
-              ? 'rgba(139, 92, 246, 0.15)'
-              : 'rgba(236, 72, 153, 0.15)';
+          // Color de fondo según si es parte de una constelación
+          const bgColor = isConstellationStar
+            ? 'rgba(251, 191, 36, 0.25)' // Amarillo/dorado más visible para constelación
+            : box.obj_type === 'star'
+              ? 'rgba(251, 191, 36, 0.15)'
+              : box.obj_type === 'galaxy'
+                ? 'rgba(139, 92, 246, 0.15)'
+                : 'rgba(236, 72, 153, 0.15)';
 
           // Tamaño mínimo para bounding boxes (20px para que no parezcan puntos)
           const minBoxSize = 20;
@@ -173,7 +191,7 @@ export default function BoundingBoxOverlay({ boxes, visible, onClose, isScreensh
 
           return (
             <div
-              key={index}
+              key={`box-${boxIndex}-${centerX}-${centerY}`}
               className="absolute pointer-events-none"
               style={{
                 left: x - displayWidth / 2,
@@ -193,7 +211,9 @@ export default function BoundingBoxOverlay({ boxes, visible, onClose, isScreensh
       {/* Panel de estadísticas compacto */}
       <div className="absolute bottom-14 right-4 z-[950] bg-black/90 border border-cyan-500/30 rounded-lg p-2 shadow-[0_0_20px_rgba(6,182,212,0.2)] pointer-events-auto">
         <div className="flex items-center justify-between mb-1">
-          <div className="text-cyan-400 font-mono font-bold text-xs">DETECTIONS</div>
+          <div className="text-cyan-400 font-mono font-bold text-xs">
+            {matchedIndices && matchedIndices.length > 0 ? 'CONSTELLATION' : 'DETECTIONS'}
+          </div>
           <button
             onClick={() => {
               // Llamar a la función global de limpieza
@@ -212,22 +232,39 @@ export default function BoundingBoxOverlay({ boxes, visible, onClose, isScreensh
           </button>
         </div>
         <div className="space-y-1 text-[9px] font-mono">
-          <div className="flex justify-between gap-3">
-            <span className="text-yellow-400/80">⭐ Stars:</span>
-            <span className="text-yellow-400 font-bold">{boxes.filter(b => b.obj_type === 'star').length}</span>
-          </div>
-          <div className="flex justify-between gap-3">
-            <span className="text-purple-400/80">🌌 Galaxies:</span>
-            <span className="text-purple-400 font-bold">{boxes.filter(b => b.obj_type === 'galaxy').length}</span>
-          </div>
-          <div className="flex justify-between gap-3">
-            <span className="text-pink-400/80">✨ Clusters:</span>
-            <span className="text-pink-400 font-bold">{boxes.filter(b => b.obj_type === 'cluster').length}</span>
-          </div>
-          <div className="border-t border-cyan-500/30 mt-1 pt-1 flex justify-between gap-3">
-            <span className="text-cyan-400/60">Total:</span>
-            <span className="text-cyan-400 font-bold">{boxes.length}</span>
-          </div>
+          {matchedIndices && matchedIndices.length > 0 ? (
+            // Mostrar info de constelación
+            <>
+              <div className="flex justify-between gap-3">
+                <span className="text-yellow-400/80">⭐ Constellation Stars:</span>
+                <span className="text-yellow-400 font-bold">{matchedIndices.length}</span>
+              </div>
+              <div className="border-t border-cyan-500/30 mt-1 pt-1 flex justify-between gap-3">
+                <span className="text-cyan-400/60">Total Detected:</span>
+                <span className="text-cyan-400 font-bold">{boxes.length}</span>
+              </div>
+            </>
+          ) : (
+            // Mostrar contadores normales
+            <>
+              <div className="flex justify-between gap-3">
+                <span className="text-yellow-400/80">⭐ Stars:</span>
+                <span className="text-yellow-400 font-bold">{boxes.filter(b => b.obj_type === 'star').length}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-purple-400/80">🌌 Galaxies:</span>
+                <span className="text-purple-400 font-bold">{boxes.filter(b => b.obj_type === 'galaxy').length}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-pink-400/80">✨ Clusters:</span>
+                <span className="text-pink-400 font-bold">{boxes.filter(b => b.obj_type === 'cluster').length}</span>
+              </div>
+              <div className="border-t border-cyan-500/30 mt-1 pt-1 flex justify-between gap-3">
+                <span className="text-cyan-400/60">Total:</span>
+                <span className="text-cyan-400 font-bold">{boxes.length}</span>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </>
