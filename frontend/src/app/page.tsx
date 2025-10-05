@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import ImageUploader, { TilesData } from '@/components/ImageUploader';
 import QueryBox from '@/components/QueryBox';
 import Toolbox from '@/components/Toolbox';
 import BoundingBoxOverlay from '@/components/BoundingBoxOverlay';
+// import { AndromedaViewerRef } from '@/components/AndromedaViewerTiled';
+// import { DynamicViewerRef } from '@/components/DynamicImageViewer';
 
 
 // Importar los componentes de forma dinámica para evitar SSR issues
@@ -37,6 +39,11 @@ export default function Home() {
   const [isQueryLoading, setIsQueryLoading] = useState(false);
   const [detectionResult, setDetectionResult] = useState<any>(null);
   const [showBoundingBoxes, setShowBoundingBoxes] = useState(false);
+  const [convertedBoxes, setConvertedBoxes] = useState<any[]>([]);
+
+  // Referencias para capturar screenshots
+  // const andromedaViewerRef = useRef<AndromedaViewerRef>(null);
+  // const dynamicViewerRef = useRef<DynamicViewerRef>(null);
 
 
   const handleImageProcessed = (tilesData: TilesData) => {
@@ -57,9 +64,89 @@ export default function Home() {
     setDetectionResult(result);
     setShowBoundingBoxes(true);
     console.log('Detection result received:', result);
+
+    // Las coordenadas del backend están en píxeles del screenshot
+    // Necesitamos convertirlas a coordenadas de la imagen completa
+    
+    if (result.bounding_box_list && (window as any).andromedaViewerState) {
+      const viewerState = (window as any).andromedaViewerState;
+      const screenshotDims = (window as any).screenshotDimensions;
+      
+      if (!screenshotDims) {
+        console.error('No screenshot dimensions available');
+        return;
+      }
+      
+      console.log('🔍 Converting boxes:', {
+        viewerState,
+        screenshotDims,
+        boxCount: result.bounding_box_list.length
+      });
+      
+      // Las dimensiones del screenshot (puede estar redimensionado)
+      const screenshotWidth = screenshotDims.width;
+      const screenshotHeight = screenshotDims.height;
+      
+      // Las dimensiones originales de la ventana
+      const originalWidth = screenshotDims.originalWidth;
+      const originalHeight = screenshotDims.originalHeight;
+      
+      // Calcular cuántos píxeles de imagen caben en la ventana actual
+      const zoom = viewerState.zoom;
+      const pixelsPerScreenPixel = Math.pow(2, -(zoom + 4.8));
+      
+      // Convertir cada bounding box
+      const converted = result.bounding_box_list.map((box: any, index: number) => {
+        const [boxX, boxY] = box.center;
+        
+        // 1. Convertir coordenadas del screenshot redimensionado a coordenadas de pantalla original
+        const screenX = (boxX / screenshotWidth) * originalWidth;
+        const screenY = (boxY / screenshotHeight) * originalHeight;
+        
+        // 2. Calcular offset desde el centro de la pantalla
+        const offsetX = screenX - (originalWidth / 2);
+        const offsetY = screenY - (originalHeight / 2);
+        
+        // 3. Convertir offset de píxeles de pantalla a píxeles de imagen
+        const imageOffsetX = offsetX * pixelsPerScreenPixel;
+        const imageOffsetY = offsetY * pixelsPerScreenPixel;
+        
+        // 4. Sumar al centro del viewer
+        const imageX = viewerState.centerPx.x + imageOffsetX;
+        const imageY = viewerState.centerPx.y + imageOffsetY;
+        
+        // Escalar el tamaño de la box también
+        const imageWidth = (box.width / screenshotWidth) * originalWidth * pixelsPerScreenPixel;
+        const imageHeight = (box.height / screenshotHeight) * originalHeight * pixelsPerScreenPixel;
+        
+        if (index === 0) {
+          console.log('📦 First box conversion:', {
+            original: { x: boxX, y: boxY, w: box.width, h: box.height },
+            screen: { x: screenX, y: screenY },
+            offset: { x: offsetX, y: offsetY },
+            pixelsPerScreenPixel,
+            imageOffset: { x: imageOffsetX, y: imageOffsetY },
+            center: viewerState.centerPx,
+            final: { x: imageX, y: imageY, w: imageWidth, h: imageHeight }
+          });
+        }
+        
+        return {
+          ...box,
+          center: [imageX, imageY],
+          width: imageWidth,
+          height: imageHeight
+        };
+      });
+      
+      setConvertedBoxes(converted);
+      console.log('✅ Converted', converted.length, 'boxes to image coordinates');
+    }
   };
 
   const handleQuery = async (query: string, attachedImages?: File[]) => {
+    setIsQueryLoading(true);
+
     let images: string[] = [];
     if (attachedImages && attachedImages.length > 0) {
       // Convert all attached images to base64 and add to the array
@@ -76,13 +163,20 @@ export default function Home() {
       );
     }
 
-    const response = await fetch('http://localhost:8000/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: query, images }),
-    });
-    const data = await response.json();
-    alert('Respuesta de la API: ' + data.response);
+    try {
+      const response = await fetch('http://localhost:8000/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: query, images }),
+      });
+      const data = await response.json();
+      alert('Respuesta de la API: ' + data.response);
+    } catch (error) {
+      console.error('Error sending query:', error);
+      alert('Error al enviar la consulta');
+    } finally {
+      setIsQueryLoading(false);
+    }
   };
 
   return (
@@ -126,7 +220,18 @@ export default function Home() {
       )}
 
       {/* Toolbox para detección de estrellas */}
-      {!customImage && <Toolbox onResult={handleDetectionResult} />}
+      {!customImage && (
+        <Toolbox
+          onResult={handleDetectionResult}
+          onCaptureView={async () => {
+            // Usar función global en lugar de ref
+            if ((window as any).captureAndromedaView) {
+              return await (window as any).captureAndromedaView();
+            }
+            return '';
+          }}
+        />
+      )}
 
       {/* Uploader modal */}
       {showUploader && (
@@ -136,13 +241,9 @@ export default function Home() {
         />
       )}
 
-      {/* Bounding Box Overlay */}
-      {!customImage && detectionResult && detectionResult.bounding_box_list && (
-        <BoundingBoxOverlay
-          boxes={detectionResult.bounding_box_list}
-          visible={showBoundingBoxes}
-          onClose={() => setShowBoundingBoxes(false)}
-        />
+      {/* Bounding boxes overlay */}
+      {!customImage && convertedBoxes.length > 0 && (
+        <BoundingBoxOverlay boxes={convertedBoxes} visible={showBoundingBoxes} />
       )}
 
       {/* Query Box - Compacto */}

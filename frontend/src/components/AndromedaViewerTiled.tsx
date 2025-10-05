@@ -216,6 +216,82 @@ export default function AndromedaViewerTiled() {
             updateViewerState();
         });
 
+        // Función global para capturar el viewer
+        (window as any).captureAndromedaView = async () => {
+            if (!containerRef.current) {
+                console.error('Container ref not available');
+                return '';
+            }
+
+            try {
+                // Importar html2canvas dinámicamente
+                const html2canvas = (await import('html2canvas')).default;
+                
+                console.log('Capturing Andromeda current view...');
+
+                // Capturar el contenedor del mapa
+                const canvas = await html2canvas(containerRef.current, {
+                    backgroundColor: '#000000',
+                    scale: 1,
+                    logging: false,
+                    useCORS: true,
+                    allowTaint: true,
+                    removeContainer: false,
+                    imageTimeout: 0,
+                    ignoreElements: (element) => {
+                        const zIndex = window.getComputedStyle(element).zIndex;
+                        if (zIndex && parseInt(zIndex) >= 900) {
+                            return true;
+                        }
+                        return false;
+                    }
+                });
+
+                console.log('Original canvas size:', canvas.width, 'x', canvas.height);
+
+                // Guardar dimensiones originales
+                (window as any).screenshotDimensions = {
+                    originalWidth: canvas.width,
+                    originalHeight: canvas.height
+                };
+
+                // Redimensionar si es mayor a 2000x2000
+                const MAX_SIZE = 2000;
+                let finalCanvas = canvas;
+                
+                if (canvas.width > MAX_SIZE || canvas.height > MAX_SIZE) {
+                    const scale = Math.min(MAX_SIZE / canvas.width, MAX_SIZE / canvas.height);
+                    const newWidth = Math.floor(canvas.width * scale);
+                    const newHeight = Math.floor(canvas.height * scale);
+
+                    console.log(`Resizing to ${newWidth}x${newHeight} (scale: ${scale.toFixed(3)})`);
+
+                    finalCanvas = document.createElement('canvas');
+                    finalCanvas.width = newWidth;
+                    finalCanvas.height = newHeight;
+                    
+                    const ctx = finalCanvas.getContext('2d');
+                    if (ctx) {
+                        ctx.imageSmoothingEnabled = true;
+                        ctx.imageSmoothingQuality = 'high';
+                        ctx.drawImage(canvas, 0, 0, newWidth, newHeight);
+                    }
+                }
+
+                // Guardar dimensiones finales
+                (window as any).screenshotDimensions.width = finalCanvas.width;
+                (window as any).screenshotDimensions.height = finalCanvas.height;
+
+                const screenshot = finalCanvas.toDataURL('image/jpeg', 0.85);
+                console.log('Screenshot captured. Final size:', finalCanvas.width, 'x', finalCanvas.height, 'Base64 length:', screenshot.length);
+
+                return screenshot;
+            } catch (error) {
+                console.error('Failed to capture Andromeda view:', error);
+                return '';
+            }
+        };
+
         mapRef.current = map;
 
         return () => {

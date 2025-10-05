@@ -14,59 +14,128 @@ interface Props {
   boxes: BoundingBox[];
   visible: boolean;
   onClose?: () => void;
+  isScreenshotBased?: boolean; // Nueva prop para indicar si las coords son del screenshot
 }
 
-export default function BoundingBoxOverlay({ boxes, visible, onClose }: Props) {
+export default function BoundingBoxOverlay({ boxes, visible, onClose, isScreenshotBased = false }: Props) {
   const [viewerState, setViewerState] = useState<any>(null);
   const [selectedBox, setSelectedBox] = useState<BoundingBox | null>(null);
+  const [screenshotDimensions, setScreenshotDimensions] = useState<{ width: number, height: number } | null>(null);
+  const [captureViewerState, setCaptureViewerState] = useState<any>(null); // Estado del viewer en el momento de captura
+  const [convertedBoxes, setConvertedBoxes] = useState<BoundingBox[]>([]); // Boxes convertidas a coords absolutas
+  const [, setForceUpdate] = useState(0); // Para forzar re-renders
 
   useEffect(() => {
-    // Actualizar el estado del viewer cada 100ms
-    const interval = setInterval(() => {
+    // Actualizar el estado del viewer en cada frame de animación
+    let animationFrameId: number;
+    
+    const updateViewerState = () => {
       if (typeof window !== 'undefined' && (window as any).andromedaViewerState) {
-        setViewerState((window as any).andromedaViewerState);
+        const newState = (window as any).andromedaViewerState;
+        setViewerState(newState);
+        setForceUpdate(prev => prev + 1); // Forzar re-render
       }
-    }, 100);
+      animationFrameId = requestAnimationFrame(updateViewerState);
+    };
 
-    return () => clearInterval(interval);
+    animationFrameId = requestAnimationFrame(updateViewerState);
+
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
   }, []);
+
+  // Si es basado en screenshot, capturar el estado actual del viewer y convertir coordenadas
+  useEffect(() => {
+    if (isScreenshotBased && visible && boxes.length > 0) {
+      const currentViewerState = (window as any).andromedaViewerState;
+      if (currentViewerState) {
+        setCaptureViewerState(currentViewerState);
+        
+        // Convertir coordenadas de screenshot a coordenadas absolutas de imagen
+        const converted = boxes.map(box => {
+          const [screenX, screenY] = box.center;
+          
+          // Convertir coordenadas de pantalla a coordenadas de imagen
+          const scale = Math.pow(2, currentViewerState.zoom + 4.8);
+          const offsetX = (screenX - window.innerWidth / 2) / scale;
+          const offsetY = (screenY - window.innerHeight / 2) / scale;
+          
+          const imageX = currentViewerState.centerPx.x + offsetX;
+          const imageY = currentViewerState.centerPx.y + offsetY;
+          
+          return {
+            ...box,
+            center: [imageX, imageY] as [number, number]
+          };
+        });
+        
+        setConvertedBoxes(converted);
+        console.log('📸 Converted screenshot boxes to image coordinates:', {
+          original: boxes.slice(0, 2),
+          converted: converted.slice(0, 2),
+          viewerState: currentViewerState
+        });
+      }
+      
+      setScreenshotDimensions({
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
+    }
+  }, [isScreenshotBased, visible, boxes]);
 
   // Debug logs
   useEffect(() => {
     console.log('🎯 BoundingBoxOverlay render check:', {
       visible,
+      isScreenshotBased,
       hasViewerState: !!viewerState,
       boxesCount: boxes.length,
       boxes: boxes.slice(0, 3), // primeros 3 boxes
-      viewerState
+      viewerState,
+      screenshotDimensions
     });
-  }, [visible, viewerState, boxes]);
+  }, [visible, viewerState, boxes, isScreenshotBased, screenshotDimensions]);
 
-  if (!visible || !viewerState || boxes.length === 0) {
-    console.log('⚠️ BoundingBoxOverlay NOT rendering:', { visible, hasViewerState: !!viewerState, boxesCount: boxes.length });
+  // Necesitamos visible y boxes
+  if (!visible || boxes.length === 0) {
+    console.log('⚠️ BoundingBoxOverlay NOT rendering:', { visible, boxesCount: boxes.length });
     return null;
   }
 
-  console.log('✅ BoundingBoxOverlay RENDERING with', boxes.length, 'boxes');
+  // SIEMPRE necesitamos viewerState para calcular posiciones en pantalla
+  if (!viewerState) {
+    console.log('⚠️ BoundingBoxOverlay waiting for viewerState');
+    return null;
+  }
+
+  // En modo screenshot, si no hay boxes convertidas aún, no renderizar
+  if (isScreenshotBased && convertedBoxes.length === 0) {
+    console.log('⚠️ BoundingBoxOverlay waiting for converted boxes');
+    return null;
+  }
+
+  // Usar boxes convertidas si es modo screenshot, sino usar las originales
+  const boxesToRender = isScreenshotBased && convertedBoxes.length > 0 ? convertedBoxes : boxes;
+  
+  console.log('✅ BoundingBoxOverlay RENDERING with', boxesToRender.length, 'boxes', isScreenshotBased ? '(screenshot-based, converted to image coords)' : '(image-based)');
 
   // Función para convertir coordenadas de imagen a coordenadas de pantalla
-  const imageToScreen = (imageX: number, imageY: number) => {
-    // Las coordenadas de la imagen en Leaflet son [y, x] (lat, lng)
-    // Necesitamos mapear las coordenadas del bounding box a la pantalla
-    
-    // Por ahora, usaremos una aproximación simple
-    // Esto necesitará ajustarse según el zoom y la posición del mapa
+  const imageToScreen = (imageX: number, imageY: number, boxWidth: number, boxHeight: number) => {    // Modo original: coordenadas absolutas de imagen de Andromeda
+    // Verificar que viewerState existe
+    if (!viewerState) {
+      console.warn('⚠️ viewerState is null in image mode');
+      return { x: 0, y: 0, scale: 1, width: boxWidth, height: boxHeight };
+    }
+
     const zoom = viewerState.zoom;
     const centerPx = viewerState.centerPx;
     const imageSize = viewerState.imageSize;
 
     // Calcular el factor de escala basado en el zoom
-    // zoom -4.8 = imagen completa visible
-    // zoom 2 = máximo acercamiento
-    const zoomRange = 2 - (-4.8); // 6.8
-    const currentZoomNormalized = (zoom - (-4.8)) / zoomRange; // 0 a 1
-    
-    // Escala exponencial para el zoom
     const scale = Math.pow(2, zoom + 4.8);
 
     // Calcular offset desde el centro
@@ -77,35 +146,38 @@ export default function BoundingBoxOverlay({ boxes, visible, onClose }: Props) {
     const screenX = window.innerWidth / 2 + offsetX;
     const screenY = window.innerHeight / 2 + offsetY;
 
-    return { x: screenX, y: screenY, scale };
+    return {
+      x: screenX,
+      y: screenY,
+      scale,
+      width: boxWidth * scale,
+      height: boxHeight * scale
+    };
   };
 
   return (
     <>
       {/* Overlay de bounding boxes */}
-      <div className="absolute inset-0 pointer-events-none z-[900]">
-        {boxes.map((box, index) => {
+      <div className="absolute inset-0 pointer-events-none z-[900]" key={`${viewerState?.zoom}-${viewerState?.centerPx?.x}-${viewerState?.centerPx?.y}`}>
+        {boxesToRender.map((box, index) => {
           const [centerX, centerY] = box.center;
-          const { x, y, scale } = imageToScreen(centerX, centerY);
-          
-          const boxWidth = box.width * scale;
-          const boxHeight = box.height * scale;
+          const { x, y, scale, width: boxWidth, height: boxHeight } = imageToScreen(centerX, centerY, box.width, box.height);
 
-          // Debug primer box
-          if (index === 0) {
-            console.log('📦 First box calculation:', {
+          // Debug primer box cada vez que se calcula
+          if (index === 0 && Math.random() < 0.1) { // Solo 10% de las veces para no saturar
+            console.log('📦 First box recalculation:', {
               box,
               imageCoords: { centerX, centerY },
               screenCoords: { x, y },
               scale,
               boxWidth,
               boxHeight,
-              viewerState
+              viewerState: { zoom: viewerState?.zoom, centerPx: viewerState?.centerPx }
             });
           }
 
           // Solo renderizar si está visible en la pantalla
-          const isVisible = 
+          const isVisible =
             x + boxWidth / 2 > 0 &&
             x - boxWidth / 2 < window.innerWidth &&
             y + boxHeight / 2 > 0 &&
@@ -119,23 +191,23 @@ export default function BoundingBoxOverlay({ boxes, visible, onClose }: Props) {
           if (index === 0) console.log('✅ First box IS visible, rendering...');
 
           // Color del borde según el color del objeto
-          const borderColor = box.color === 'red' 
-            ? 'rgba(239, 68, 68, 0.8)' 
+          const borderColor = box.color === 'red'
+            ? 'rgba(239, 68, 68, 0.8)'
             : box.color === 'blue'
-            ? 'rgba(59, 130, 246, 0.8)'
-            : 'rgba(168, 85, 247, 0.8)';
+              ? 'rgba(59, 130, 246, 0.8)'
+              : 'rgba(168, 85, 247, 0.8)';
 
           // Color de fondo según el tipo
           const bgColor = box.obj_type === 'star'
             ? 'rgba(251, 191, 36, 0.1)'
             : box.obj_type === 'galaxy'
-            ? 'rgba(139, 92, 246, 0.1)'
-            : 'rgba(236, 72, 153, 0.1)';
+              ? 'rgba(139, 92, 246, 0.1)'
+              : 'rgba(236, 72, 153, 0.1)';
 
           return (
             <div
-              key={index}
-              className="absolute pointer-events-auto cursor-pointer transition-all duration-200 hover:scale-110"
+              key={`box-${index}`}
+              className="absolute pointer-events-none"
               style={{
                 left: x - boxWidth / 2,
                 top: y - boxHeight / 2,
@@ -144,8 +216,8 @@ export default function BoundingBoxOverlay({ boxes, visible, onClose }: Props) {
                 border: `2px solid ${borderColor}`,
                 backgroundColor: bgColor,
                 boxShadow: `0 0 10px ${borderColor}`,
+                transition: 'none', // Sin transición para movimiento fluido
               }}
-              onClick={() => setSelectedBox(box)}
               title={`${box.obj_type} - ${box.color}`}
             />
           );
@@ -173,7 +245,7 @@ export default function BoundingBoxOverlay({ boxes, visible, onClose }: Props) {
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-cyan-400/60">Color:</span>
-              <span 
+              <span
                 className="font-bold uppercase"
                 style={{ color: selectedBox.color === 'red' ? '#ef4444' : selectedBox.color === 'blue' ? '#3b82f6' : '#a855f7' }}
               >
@@ -211,19 +283,19 @@ export default function BoundingBoxOverlay({ boxes, visible, onClose }: Props) {
         <div className="space-y-1 text-[9px] font-mono">
           <div className="flex justify-between gap-3">
             <span className="text-yellow-400/80">⭐ Stars:</span>
-            <span className="text-yellow-400 font-bold">{boxes.filter(b => b.obj_type === 'star').length}</span>
+            <span className="text-yellow-400 font-bold">{boxesToRender.filter(b => b.obj_type === 'star').length}</span>
           </div>
           <div className="flex justify-between gap-3">
             <span className="text-purple-400/80">🌌 Galaxies:</span>
-            <span className="text-purple-400 font-bold">{boxes.filter(b => b.obj_type === 'galaxy').length}</span>
+            <span className="text-purple-400 font-bold">{boxesToRender.filter(b => b.obj_type === 'galaxy').length}</span>
           </div>
           <div className="flex justify-between gap-3">
             <span className="text-pink-400/80">✨ Clusters:</span>
-            <span className="text-pink-400 font-bold">{boxes.filter(b => b.obj_type === 'cluster').length}</span>
+            <span className="text-pink-400 font-bold">{boxesToRender.filter(b => b.obj_type === 'cluster').length}</span>
           </div>
           <div className="border-t border-cyan-500/30 mt-1 pt-1 flex justify-between gap-3">
             <span className="text-cyan-400/60">Total:</span>
-            <span className="text-cyan-400 font-bold">{boxes.length}</span>
+            <span className="text-cyan-400 font-bold">{boxesToRender.length}</span>
           </div>
         </div>
       </div>

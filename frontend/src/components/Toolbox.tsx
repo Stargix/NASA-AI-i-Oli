@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-// Hola, buenas
+
 interface Props {
   onResult?: (data: any) => void;
+  onCaptureView?: () => Promise<string>;
 }
 
-export default function Toolbox({ onResult }: Props) {
+export default function Toolbox({ onResult, onCaptureView }: Props) {
   const [mode, setMode] = useState<'auto' | 'manual'>('auto');
   const [gaussianBlur, setGaussianBlur] = useState(25);
   const [noiseThreshold, setNoiseThreshold] = useState(120);
@@ -24,72 +25,93 @@ export default function Toolbox({ onResult }: Props) {
   const autoDetectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Función compartida para ejecutar la detección
-  const executeDetection = useCallback(async () => {
-    // Determine image URL: if viewer state is available, compute tile URL from zoom/center
-    const TILE_SIZE = 256;
-    const MAX_ZOOM = 4; // must match scripts/generate-tiles.js
+  const executeDetection = useCallback(async (useScreenshot: boolean = false) => {
+    let imageUrl = '';
 
-    let imageUrl = (typeof window !== 'undefined') ? `${window.location.origin}/andromeda.jpg` : '/andromeda.jpg';
-    if (typeof window !== 'undefined' && (window as any).andromedaViewerState) {
+    // Si se solicita screenshot y la función está disponible, usarla
+    if (useScreenshot && onCaptureView) {
+      console.log('📸 Capturing current view...');
       try {
-        const st = (window as any).andromedaViewerState;
-        const viewerZoom = st.zoom; // Leaflet zoom (range approx -4.8 .. 2)
-        const imageW = st.imageSize?.width || 40000;
-        const imageH = st.imageSize?.height || 10000;
-
-        const minZoom = -4.8;
-        const maxZoom = 2;
-        // Map viewer zoom (-4.8 .. 2) to tile zoom index 0..4
-        let zIndex = Math.round(((viewerZoom - minZoom) / (maxZoom - minZoom)) * MAX_ZOOM);
-        zIndex = Math.max(0, Math.min(MAX_ZOOM, zIndex));
-
-        // scale factor to convert original pixel coords to scaled image at zIndex
-        const scaleFactor = Math.pow(2, zIndex - MAX_ZOOM);
-
-        const cx = st.centerPx.x; // x in image pixels
-        const cy = st.centerPx.y; // y in image pixels
-
-        // Calculate tile coordinates
-        let tileX = Math.floor((cx * scaleFactor) / TILE_SIZE);
-        let tileY = Math.floor((cy * scaleFactor) / TILE_SIZE);
-
-        // Define actual tile grid limits for each zoom level based on existing files
-        // tiles/z/y/x.jpg structure
-        const tileGridLimits: Record<number, { maxY: number; maxX: number }> = {
-          0: { maxY: 0, maxX: 0 },  // 1x1: tiles/0/0/0.jpg
-          1: { maxY: 0, maxX: 0 },  // 1x1: tiles/1/0/0.jpg
-          2: { maxY: 1, maxX: 1 },  // 2x2: tiles/2/0-1/0-1.jpg
-          3: { maxY: 2, maxX: 3 },  // 3x4: tiles/3/0-2/0-3.jpg
-          4: { maxY: 5, maxX: 7 },  // 6x8: tiles/4/0-5/0-7.jpg
-        };
-
-        const limits = tileGridLimits[zIndex] || { maxY: 0, maxX: 0 };
-
-        // Clamp tile coordinates to valid range (tiles are 0-indexed)
-        const clampedTileX = Math.max(0, Math.min(limits.maxX, tileX));
-        const clampedTileY = Math.max(0, Math.min(limits.maxY, tileY));
-
-        // Build tile URL - format: tiles/z/y/x.jpg
-        imageUrl = `${window.location.origin}/tiles/${zIndex}/${clampedTileY}/${clampedTileX}.jpg`;
-
-        console.log('Toolbox: viewerState=', st);
-        console.log('Toolbox: computed tile', {
-          zIndex,
-          scaleFactor,
-          centerPx: { x: cx, y: cy },
-          tileX,
-          tileY,
-          clampedTileX,
-          clampedTileY,
-          limits: { maxX: limits.maxX, maxY: limits.maxY },
-          imageUrl,
-          tileExists: `Check: tiles/${zIndex}/${clampedTileY}/${clampedTileX}.jpg`
-        });
-
-      } catch (e) {
-        console.warn('Could not compute tile URL from viewer state', e);
+        imageUrl = await onCaptureView();
+        if (imageUrl) {
+          console.log('✅ Screenshot captured successfully, size:', imageUrl.length);
+        } else {
+          console.warn('⚠️ Screenshot capture returned empty, falling back to tile URL');
+        }
+      } catch (error) {
+        console.error('❌ Error capturing screenshot:', error);
       }
     }
+
+    // Si no hay screenshot, determinar image URL de tiles
+    if (!imageUrl) {
+      const TILE_SIZE = 256;
+      const MAX_ZOOM = 4; // must match scripts/generate-tiles.js
+
+      imageUrl = (typeof window !== 'undefined') ? `${window.location.origin}/andromeda.jpg` : '/andromeda.jpg';
+
+      if (typeof window !== 'undefined' && (window as any).andromedaViewerState) {
+        try {
+          const st = (window as any).andromedaViewerState;
+          const viewerZoom = st.zoom; // Leaflet zoom (range approx -4.8 .. 2)
+          const imageW = st.imageSize?.width || 40000;
+          const imageH = st.imageSize?.height || 10000;
+
+          const minZoom = -4.8;
+          const maxZoom = 2;
+          // Map viewer zoom (-4.8 .. 2) to tile zoom index 0..4
+          let zIndex = Math.round(((viewerZoom - minZoom) / (maxZoom - minZoom)) * MAX_ZOOM);
+          zIndex = Math.max(0, Math.min(MAX_ZOOM, zIndex));
+
+          // scale factor to convert original pixel coords to scaled image at zIndex
+          const scaleFactor = Math.pow(2, zIndex - MAX_ZOOM);
+
+          const cx = st.centerPx.x; // x in image pixels
+          const cy = st.centerPx.y; // y in image pixels
+
+          // Calculate tile coordinates
+          let tileX = Math.floor((cx * scaleFactor) / TILE_SIZE);
+          let tileY = Math.floor((cy * scaleFactor) / TILE_SIZE);
+
+          // Define actual tile grid limits for each zoom level based on existing files
+          // tiles/z/y/x.jpg structure
+          const tileGridLimits: Record<number, { maxY: number; maxX: number }> = {
+            0: { maxY: 0, maxX: 0 },  // 1x1: tiles/0/0/0.jpg
+            1: { maxY: 0, maxX: 0 },  // 1x1: tiles/1/0/0.jpg
+            2: { maxY: 1, maxX: 1 },  // 2x2: tiles/2/0-1/0-1.jpg
+            3: { maxY: 2, maxX: 3 },  // 3x4: tiles/3/0-2/0-3.jpg
+            4: { maxY: 5, maxX: 7 },  // 6x8: tiles/4/0-5/0-7.jpg
+          };
+
+          const limits = tileGridLimits[zIndex] || { maxY: 0, maxX: 0 };
+
+          // Clamp tile coordinates to valid range (tiles are 0-indexed)
+          const clampedTileX = Math.max(0, Math.min(limits.maxX, tileX));
+          const clampedTileY = Math.max(0, Math.min(limits.maxY, tileY));
+
+          // Build tile URL - format: tiles/z/y/x.jpg
+          imageUrl = `${window.location.origin}/tiles/${zIndex}/${clampedTileY}/${clampedTileX}.jpg`;
+
+          console.log('Toolbox: viewerState=', st);
+          console.log('Toolbox: computed tile', {
+            zIndex,
+            scaleFactor,
+            centerPx: { x: cx, y: cy },
+            tileX,
+            tileY,
+            clampedTileX,
+            clampedTileY,
+            limits: { maxX: limits.maxX, maxY: limits.maxY },
+            imageUrl,
+            tileExists: `Check: tiles/${zIndex}/${clampedTileY}/${clampedTileX}.jpg`
+          });
+
+        } catch (e) {
+          console.warn('Could not compute tile URL from viewer state', e);
+        }
+      }
+    }
+
     const payload = {
       image: imageUrl,
       top_left: [0, 0],
@@ -103,20 +125,45 @@ export default function Toolbox({ onResult }: Props) {
       max_components: maxComponents,
     };
 
-    console.log('Toolbox: About to fetch /star_analysis', payload);
-    const resp = await fetch('http://localhost:8000/star_analysis', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+    console.log('Toolbox: About to fetch /star_analysis', {
+      ...payload,
+      image: payload.image.substring(0, 100) + '...' // Solo mostrar inicio de la imagen
     });
-    console.log('Toolbox: Fetch to /star_analysis completed', resp);
+    
+    let resp;
+    try {
+      // Crear un timeout de 60 segundos
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
+      
+      resp = await fetch('http://localhost:8000/star_analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      console.log('Toolbox: Fetch to /star_analysis completed', resp.status, resp.statusText);
+    } catch (fetchError) {
+      if ((fetchError as Error).name === 'AbortError') {
+        console.error('❌ Request timeout after 60 seconds');
+        throw new Error('Request timeout - the server is taking too long to respond');
+      }
+      console.error('❌ Fetch error:', fetchError);
+      throw new Error(`Network error: ${fetchError}`);
+    }
 
-    if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText}`);
+    if (!resp.ok) {
+      const errorText = await resp.text();
+      console.error('❌ Server error:', resp.status, errorText);
+      throw new Error(`Server error ${resp.status}: ${errorText}`);
+    }
 
     const data = await resp.json();
-    console.log('Toolbox: Response data from /star_analysis', data);
+    console.log('✅ Response data from /star_analysis received:', data);
     return data;
-  }, [mode, gaussianBlur, noiseThreshold, adaptativeFiltering, separationThreshold, minSize, maxComponents]);
+  }, [mode, gaussianBlur, noiseThreshold, adaptativeFiltering, separationThreshold, minSize, maxComponents, onCaptureView]);
 
   // Función para ejecutar detección automática en background (sin mostrar resultados)
   const runAutoDetection = useCallback(async () => {
@@ -126,7 +173,7 @@ export default function Toolbox({ onResult }: Props) {
     console.log('🔍 Auto-detection triggered (background)...');
 
     try {
-      const detectionResult = await executeDetection();
+      const detectionResult = await executeDetection(false); // false = NO usar screenshot en background
       setCachedResult(detectionResult);
       console.log('✅ Auto-detection completed and cached');
     } catch (err) {
@@ -181,19 +228,12 @@ export default function Toolbox({ onResult }: Props) {
     setResult(null);
 
     try {
-      // Si hay resultado cacheado y los parámetros no han cambiado, usar el cache
-      if (cachedResult && !cachedResult.error) {
-        console.log('📦 Using cached detection result');
-        setResult(cachedResult);
-        onResult?.(cachedResult);
-      } else {
-        // Si no hay cache o hubo error, ejecutar nueva detección
-        console.log('🔍 Running new detection...');
-        const data = await executeDetection();
-        setResult(data);
-        setCachedResult(data);
-        onResult?.(data);
-      }
+      // Ejecutar nueva detección CON CAPTURA DE SCREENSHOT
+      console.log('� Running detection with screenshot capture...');
+      const data = await executeDetection(true); // true = usar screenshot
+      setResult(data);
+      setCachedResult(data);
+      onResult?.(data);
     } catch (err) {
       console.error('Toolbox detection error:', err);
       const errorResult = { error: String(err) };
