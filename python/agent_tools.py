@@ -5,7 +5,7 @@ import os
 import base64
 import json
 from typing import List, Dict, Optional
-from star_detection_tools import process_image, find_clusters, extract_properties_fast
+from miquel.star_detection_tools import process_image, find_clusters, extract_properties_fast
 
 
 DB_PATH_DEFAULT = "space_objects.db"

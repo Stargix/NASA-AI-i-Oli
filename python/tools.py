@@ -45,22 +45,28 @@ def extract_boxes_from_image(image_path, top_left=(0, 0), bottom_right=None, **k
     cropped = img[y1:y2, x1:x2]
 
     objects = detect_bounding_boxes(cropped, **kwargs)
+
     x_offset, y_offset = top_left
 
     boxes = []
     for obj in objects:
-        center_x = obj["centroid_x"] + x_offset
-        center_y = obj["centroid_y"] + y_offset
+        obj["centroid_x"] += x_offset
+        obj["centroid_y"] += y_offset
         boxes.append(
             BoundingBoxSchema(
-                center=(float(center_x), float(center_y)),
+                center=(float(obj["centroid_x"]), float(obj["centroid_y"])),
                 width=float(obj["bbox_width"]),
                 height=float(obj["bbox_height"]),
                 color=obj.get("color"),
                 obj_type=obj.get("obj_type")
             )
         )
+    
+    # Ensure database table exists and save objects
+    create_space_objects_table(DB_PATH_DEFAULT)
+    save_objects_to_db(objects, image_path, DB_PATH_DEFAULT)
     return boxes
+
 
 
 def detect_bounding_boxes(
