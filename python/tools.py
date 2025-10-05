@@ -74,7 +74,7 @@ def detect_bounding_boxes(
     max_components=1000,
     cluster_gaussian_blur=101,
     min_cluster_size=5000,
-    detect_clusters=True
+    detect_clusters=False
 ):
     """
     Procesa la imagen y devuelve una lista de diccionarios con las bounding boxes detectadas,
