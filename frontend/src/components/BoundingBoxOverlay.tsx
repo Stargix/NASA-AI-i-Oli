@@ -83,7 +83,7 @@ export default function BoundingBoxOverlay({ boxes, visible, onClose }: Props) {
   return (
     <>
       {/* Overlay de bounding boxes */}
-      <div className="absolute inset-0 pointer-events-none z-[1200]">
+      <div className="absolute inset-0 pointer-events-none z-[900]">
         {boxes.map((box, index) => {
           const [centerX, centerY] = box.center;
           const { x, y, scale } = imageToScreen(centerX, centerY);
@@ -154,7 +154,7 @@ export default function BoundingBoxOverlay({ boxes, visible, onClose }: Props) {
 
       {/* Panel de información del box seleccionado */}
       {selectedBox && (
-        <div className="absolute top-20 right-4 z-[1300] bg-black/90 border border-cyan-500/30 rounded-lg p-3 shadow-[0_0_20px_rgba(6,182,212,0.3)]">
+        <div className="absolute top-20 right-4 z-[950] bg-black/90 border border-cyan-500/30 rounded-lg p-3 shadow-[0_0_20px_rgba(6,182,212,0.3)]">
           <div className="flex items-center justify-between mb-2">
             <div className="text-cyan-400 font-mono font-bold text-xs">OBJECT INFO</div>
             <button
@@ -193,7 +193,7 @@ export default function BoundingBoxOverlay({ boxes, visible, onClose }: Props) {
       )}
 
       {/* Panel de estadísticas compacto */}
-      <div className="absolute bottom-14 right-4 z-[1200] bg-black/90 border border-cyan-500/30 rounded-lg p-2 shadow-[0_0_20px_rgba(6,182,212,0.2)]">
+      <div className="absolute bottom-14 right-4 z-[950] bg-black/90 border border-cyan-500/30 rounded-lg p-2 shadow-[0_0_20px_rgba(6,182,212,0.2)]">
         <div className="flex items-center justify-between mb-1">
           <div className="text-cyan-400 font-mono font-bold text-xs">DETECTIONS</div>
           {onClose && (

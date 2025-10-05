@@ -206,32 +206,42 @@ export default function Toolbox({ onResult }: Props) {
 
   // Función para probar con datos de ejemplo (DEMO)
   const runDemoDetection = () => {
+    // Obtener el centro actual del visor para colocar los objetos demo ahí
+    const viewerState = (window as any).andromedaViewerState;
+    const centerX = viewerState?.centerPx?.x || 20000; // Centro por defecto de la imagen
+    const centerY = viewerState?.centerPx?.y || 5000;
+
+    // Generar objetos demo alrededor del centro visible
     const demoData = {
       bounding_box_list: [
-        { center: [403.5, 109.5], height: 1.0, width: 1.0, color: 'blue', obj_type: 'star' },
-        { center: [427.0, 111.0], height: 4.0, width: 4.0, color: 'blue', obj_type: 'star' },
-        { center: [151.5, 195.0], height: 2.0, width: 1.0, color: 'red', obj_type: 'galaxy' },
-        { center: [231.5, 285.0], height: 2.0, width: 1.0, color: 'red', obj_type: 'galaxy' },
-        { center: [253.5, 298.5], height: 1.0, width: 1.0, color: 'red', obj_type: 'star' },
-        { center: [284.0, 339.5], height: 9.0, width: 10.0, color: 'blue', obj_type: 'star' },
-        { center: [496.5, 388.0], height: 6.0, width: 7.0, color: 'blue', obj_type: 'star' },
-        { center: [349.0, 389.5], height: 5.0, width: 6.0, color: 'blue', obj_type: 'star' },
-        { center: [210.0, 411.5], height: 3.0, width: 4.0, color: 'red', obj_type: 'galaxy' },
-        { center: [196.5, 453.5], height: 1.0, width: 1.0, color: 'blue', obj_type: 'star' },
-        { center: [334.5, 499.5], height: 1.0, width: 1.0, color: 'red', obj_type: 'star' },
-        { center: [341.0, 499.0], height: 2.0, width: 4.0, color: 'red', obj_type: 'galaxy' },
-        { center: [158.0, 102.5], height: 5.0, width: 14.0, color: 'red', obj_type: 'cluster' },
-        { center: [178.5, 104.0], height: 8.0, width: 7.0, color: 'red', obj_type: 'cluster' },
-        { center: [300.0, 300.0], height: 40.0, width: 40.0, color: 'red', obj_type: 'cluster' }, // Reducido para ser visible
-        { center: [403.0, 111.5], height: 23.0, width: 10.0, color: 'blue', obj_type: 'cluster' },
-        { center: [439.0, 136.5], height: 73.0, width: 44.0, color: 'red', obj_type: 'cluster' },
-        { center: [470.5, 102.0], height: 4.0, width: 15.0, color: 'red', obj_type: 'cluster' },
-        { center: [102.5, 114.0], height: 10.0, width: 5.0, color: 'red', obj_type: 'cluster' },
-        { center: [350.5, 112.5], height: 7.0, width: 7.0, color: 'red', obj_type: 'cluster' },
+        // Estrellas cerca del centro
+        { center: [centerX - 200, centerY - 100], height: 50, width: 50, color: 'blue', obj_type: 'star' },
+        { center: [centerX + 150, centerY - 50], height: 80, width: 80, color: 'blue', obj_type: 'star' },
+        { center: [centerX - 100, centerY + 150], height: 60, width: 60, color: 'red', obj_type: 'star' },
+        { center: [centerX + 200, centerY + 100], height: 70, width: 70, color: 'blue', obj_type: 'star' },
+        
+        // Galaxias
+        { center: [centerX - 300, centerY], height: 100, width: 80, color: 'red', obj_type: 'galaxy' },
+        { center: [centerX + 250, centerY - 200], height: 120, width: 90, color: 'red', obj_type: 'galaxy' },
+        { center: [centerX, centerY + 250], height: 110, width: 85, color: 'blue', obj_type: 'galaxy' },
+        
+        // Clusters más grandes
+        { center: [centerX - 400, centerY - 300], height: 200, width: 180, color: 'red', obj_type: 'cluster' },
+        { center: [centerX + 350, centerY + 200], height: 250, width: 220, color: 'blue', obj_type: 'cluster' },
+        { center: [centerX, centerY - 350], height: 180, width: 160, color: 'red', obj_type: 'cluster' },
+        
+        // Más estrellas dispersas
+        { center: [centerX + 100, centerY], height: 55, width: 55, color: 'blue', obj_type: 'star' },
+        { center: [centerX - 150, centerY - 200], height: 65, width: 65, color: 'red', obj_type: 'star' },
+        { center: [centerX + 300, centerY - 100], height: 45, width: 45, color: 'blue', obj_type: 'star' },
+        { center: [centerX - 250, centerY + 200], height: 75, width: 75, color: 'red', obj_type: 'star' },
+        
+        // Objeto en el centro exacto para referencia
+        { center: [centerX, centerY], height: 100, width: 100, color: 'blue', obj_type: 'cluster' },
       ]
     };
     
-    console.log('🎭 DEMO mode: Using sample data');
+    console.log('🎭 DEMO mode: Using sample data at center', { centerX, centerY });
     setResult(demoData);
     setCachedResult(demoData);
     onResult?.(demoData);
