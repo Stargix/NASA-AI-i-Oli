@@ -62,13 +62,16 @@ Final Answer: <REPRODUCE EXACTAMENTE el JSON del último Observation>
             connection (sqlite3.Connection): Connection to the SQLite database
             google_api_key (Optional[str]): The Google API key for the ChatGoogleGenerativeAI model.
         """
-        if google_api_key:
-            os.environ["GOOGLE_API_KEY"] = google_api_key
-        elif not os.getenv("GOOGLE_API_KEY"):
-            raise ValueError("Falta GOOGLE_API_KEY en el entorno.")
+        # Configurar API key explícitamente
+        os.environ["GOOGLE_API_KEY"] = "AIzaSyBPQhOJLfsa_CURaAtWpJpcuINpauGPz9Q"
         
         self.connection = connection
-        self.ejecutar_sql = lambda x: ejecutar_sql(x, connection)
+        # Configurar la función ejecutar_sql para usar la conexión
+        def ejecutar_sql_with_connection(query: str) -> str:
+            """Ejecuta una consulta SQL en la base de datos"""
+            return ejecutar_sql(query)
+        
+        self.ejecutar_sql = ejecutar_sql_with_connection
         self.executor = self._build_agent()
 
     def _build_agent(self) -> AgentExecutor:
@@ -89,7 +92,16 @@ Final Answer: <REPRODUCE EXACTAMENTE el JSON del último Observation>
         )
 
         # Creamos una lista de herramientas donde ejecutar_sql está enlazado a nuestra conexión
-        tools = [self.ejecutar_sql]
+        # Configurar la herramienta ejecutar_sql con el decorador tool
+        from langchain_core.tools import Tool
+        
+        sql_tool = Tool(
+            name="ejecutar_sql",
+            func=self.ejecutar_sql,
+            description="Ejecuta una consulta SQL en la base de datos de objetos espaciales"
+        )
+
+        tools = [sql_tool]
 
         agent = create_react_agent(
             llm=llm,
