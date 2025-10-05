@@ -138,7 +138,7 @@ export default function Similarity({ onClose }: Props) {
       for (let col = 0; col < result.grid_size; col++) {
         const score = scores[row][col];
         
-        // Convertir el score (0-1) a un color del espectro azul -> verde -> rojo
+        // Convertir el score (0-1) a un color del espectro amarillo -> azul -> verde
         const color = scoreToColor(score);
         
         // Posición de la celda en la pantalla
@@ -150,48 +150,60 @@ export default function Similarity({ onClose }: Props) {
         ctx.fillRect(x, y, cellWidth, cellHeight);
 
         // Dibujar el borde de la celda
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
         ctx.lineWidth = 1;
         ctx.strokeRect(x, y, cellWidth, cellHeight);
+
+        // Dibujar el número de similitud en el centro de la celda
+        const percentage = (score * 100).toFixed(0);
+        const fontSize = Math.max(8, Math.min(cellWidth / 4, cellHeight / 4, 16));
+        
+        ctx.font = `bold ${fontSize}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // Sombra para el texto para mejor legibilidad
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+        ctx.shadowBlur = 3;
+        ctx.shadowOffsetX = 1;
+        ctx.shadowOffsetY = 1;
+        
+        // Color del texto basado en el fondo
+        ctx.fillStyle = score > 0.5 ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.85)';
+        
+        // Dibujar el texto en el centro de la celda
+        ctx.fillText(`${percentage}%`, x + cellWidth / 2, y + cellHeight / 2);
+        
+        // Resetear la sombra
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
       }
     }
   }, [result, selectedMetric, showOverlay]);
 
-  // Función para convertir score a color (azul -> cian -> verde -> amarillo -> rojo)
+  // Función para convertir score a color (amarillo -> azul -> verde)
   const scoreToColor = (score: number): string => {
     // Asegurar que el score está entre 0 y 1
     const clampedScore = Math.max(0, Math.min(1, score));
     
-    // Transparencia base
-    const alpha = 0.6;
+    // Transparencia más baja para mayor transparencia
+    const alpha = 0.35;
     
-    if (clampedScore < 0.25) {
-      // Azul (0) -> Cian (0.25)
-      const t = clampedScore / 0.25;
-      const r = 0;
-      const g = Math.round(255 * t);
-      const b = 255;
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    } else if (clampedScore < 0.5) {
-      // Cian (0.25) -> Verde (0.5)
-      const t = (clampedScore - 0.25) / 0.25;
-      const r = 0;
-      const g = 255;
-      const b = Math.round(255 * (1 - t));
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    } else if (clampedScore < 0.75) {
-      // Verde (0.5) -> Amarillo (0.75)
-      const t = (clampedScore - 0.5) / 0.25;
-      const r = Math.round(255 * t);
-      const g = 255;
-      const b = 0;
+    if (clampedScore < 0.5) {
+      // Amarillo (0) -> Azul (0.5)
+      const t = clampedScore / 0.5;
+      const r = Math.round(255 * (1 - t));
+      const g = Math.round(255 * (1 - t));
+      const b = Math.round(255 * t);
       return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     } else {
-      // Amarillo (0.75) -> Rojo (1.0)
-      const t = (clampedScore - 0.75) / 0.25;
-      const r = 255;
-      const g = Math.round(255 * (1 - t));
-      const b = 0;
+      // Azul (0.5) -> Verde (1.0)
+      const t = (clampedScore - 0.5) / 0.5;
+      const r = 0;
+      const g = Math.round(255 * t);
+      const b = Math.round(255 * (1 - t));
       return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     }
   };
@@ -295,7 +307,7 @@ export default function Similarity({ onClose }: Props) {
       )}
 
       {/* Control Panel */}
-      <div className="absolute top-[520px] left-4 z-[1100] w-64 bg-black/90 border border-cyan-500/30 rounded-lg shadow-[0_0_20px_rgba(6,182,212,0.2)]">
+      <div className="absolute top-4 right-4 z-[1100] w-64 bg-black/90 border border-cyan-500/30 rounded-lg shadow-[0_0_20px_rgba(6,182,212,0.2)]">
         {/* Header */}
       <div className="p-2.5 border-b border-cyan-500/20 flex items-center justify-between">
         <div className="text-cyan-400 font-mono font-bold text-xs flex items-center gap-1.5">
@@ -427,16 +439,18 @@ export default function Similarity({ onClose }: Props) {
               <div className="pt-2 border-t border-cyan-500/30">
                 <div className="text-[8px] text-cyan-400/70 mb-1">Color Scale:</div>
                 <div className="flex h-3 rounded overflow-hidden">
-                  <div className="flex-1" style={{ backgroundColor: 'rgb(0, 0, 255)' }}></div>
-                  <div className="flex-1" style={{ backgroundColor: 'rgb(0, 255, 255)' }}></div>
-                  <div className="flex-1" style={{ backgroundColor: 'rgb(0, 255, 0)' }}></div>
                   <div className="flex-1" style={{ backgroundColor: 'rgb(255, 255, 0)' }}></div>
-                  <div className="flex-1" style={{ backgroundColor: 'rgb(255, 0, 0)' }}></div>
+                  <div className="flex-1" style={{ backgroundColor: 'rgb(192, 192, 64)' }}></div>
+                  <div className="flex-1" style={{ backgroundColor: 'rgb(128, 128, 128)' }}></div>
+                  <div className="flex-1" style={{ backgroundColor: 'rgb(64, 128, 192)' }}></div>
+                  <div className="flex-1" style={{ backgroundColor: 'rgb(0, 128, 255)' }}></div>
+                  <div className="flex-1" style={{ backgroundColor: 'rgb(0, 192, 128)' }}></div>
+                  <div className="flex-1" style={{ backgroundColor: 'rgb(0, 255, 0)' }}></div>
                 </div>
                 <div className="flex justify-between text-[7px] text-cyan-400/50 mt-0.5">
-                  <span>0%</span>
-                  <span>50%</span>
-                  <span>100%</span>
+                  <span>0% (Yellow)</span>
+                  <span>50% (Blue)</span>
+                  <span>100% (Green)</span>
                 </div>
               </div>
             </div>
