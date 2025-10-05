@@ -77,42 +77,9 @@ const DynamicImageViewer = forwardRef<DynamicViewerRef, DynamicViewerProps>(
                         }
                     });
 
-                    console.log('Original canvas size:', canvas.width, 'x', canvas.height);
-
-                    // Redimensionar si es mayor a 2000x2000
-                    const MAX_SIZE = 2000;
-                    let finalCanvas = canvas;
-                    
-                    if (canvas.width > MAX_SIZE || canvas.height > MAX_SIZE) {
-                        // Calcular nueva dimensión manteniendo aspect ratio
-                        const scale = Math.min(MAX_SIZE / canvas.width, MAX_SIZE / canvas.height);
-                        const newWidth = Math.floor(canvas.width * scale);
-                        const newHeight = Math.floor(canvas.height * scale);
-
-                        console.log(`Resizing to ${newWidth}x${newHeight} (scale: ${scale.toFixed(3)})`);
-
-                        // Crear un nuevo canvas redimensionado
-                        finalCanvas = document.createElement('canvas');
-                        finalCanvas.width = newWidth;
-                        finalCanvas.height = newHeight;
-                        
-                        const ctx = finalCanvas.getContext('2d');
-                        if (ctx) {
-                            // Usar interpolación de alta calidad
-                            ctx.imageSmoothingEnabled = true;
-                            ctx.imageSmoothingQuality = 'high';
-                            ctx.drawImage(canvas, 0, 0, newWidth, newHeight);
-                        }
-
-                        // Guardar el factor de escala para la conversión de coordenadas
-                        (window as any).screenshotScale = scale;
-                    } else {
-                        (window as any).screenshotScale = 1;
-                    }
-
                     // Convertir a base64 con calidad ajustable
-                    const screenshot = finalCanvas.toDataURL('image/jpeg', 0.85);
-                    console.log('Screenshot captured successfully. Final size:', finalCanvas.width, 'x', finalCanvas.height, 'Base64 length:', screenshot.length);
+                    const screenshot = canvas.toDataURL('image/jpeg', 0.85);
+                    console.log('Screenshot captured successfully. Size:', screenshot.length);
 
                     return screenshot;
                 } catch (error) {

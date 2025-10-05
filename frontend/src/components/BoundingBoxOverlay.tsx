@@ -152,29 +152,34 @@ export default function BoundingBoxOverlay({ boxes, visible, onClose, isScreensh
 
           if (index === 0) console.log('✅ First box IS visible, rendering...');
 
-          // Color del borde según el color del objeto
+          // Color del borde según el color del objeto (azul → verde)
           const borderColor = box.color === 'red'
-            ? 'rgba(239, 68, 68, 0.8)'
+            ? 'rgba(239, 68, 68, 0.9)'
             : box.color === 'blue'
-              ? 'rgba(59, 130, 246, 0.8)'
+              ? 'rgba(34, 197, 94, 0.9)' // Verde en lugar de azul
               : 'rgba(168, 85, 247, 0.8)';
 
           // Color de fondo según el tipo
           const bgColor = box.obj_type === 'star'
-            ? 'rgba(251, 191, 36, 0.1)'
+            ? 'rgba(251, 191, 36, 0.15)'
             : box.obj_type === 'galaxy'
-              ? 'rgba(139, 92, 246, 0.1)'
-              : 'rgba(236, 72, 153, 0.1)';
+              ? 'rgba(139, 92, 246, 0.15)'
+              : 'rgba(236, 72, 153, 0.15)';
+
+          // Tamaño mínimo para bounding boxes (20px para que no parezcan puntos)
+          const minBoxSize = 20;
+          const displayWidth = Math.max(boxWidth, minBoxSize);
+          const displayHeight = Math.max(boxHeight, minBoxSize);
 
           return (
             <div
               key={index}
               className="absolute pointer-events-none"
               style={{
-                left: x - boxWidth / 2,
-                top: y - boxHeight / 2,
-                width: Math.max(boxWidth, 4), // Mínimo 4px para que sea visible
-                height: Math.max(boxHeight, 4),
+                left: x - displayWidth / 2,
+                top: y - displayHeight / 2,
+                width: displayWidth,
+                height: displayHeight,
                 border: `2px solid ${borderColor}`,
                 backgroundColor: bgColor,
                 boxShadow: `0 0 10px ${borderColor}`,
