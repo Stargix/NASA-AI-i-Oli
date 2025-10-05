@@ -122,32 +122,58 @@ DB_PATH_DEFAULT = "space_objects.db"
 def create_space_objects_table(db_path: str = DB_PATH_DEFAULT):
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS space_objects (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            centroid_x REAL,
-            centroid_y REAL,
-            area REAL,
-            compactness REAL,
-            total_brightness REAL,
-            peak_brightness REAL,
-            color TEXT,
-            background_contrast REAL,
-            obj_type TEXT,
-            bbox_x REAL,
-            bbox_y REAL,
-            bbox_width REAL,
-            bbox_height REAL,
-            processing_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
+    
+    # Verificar si la tabla existe y tiene la estructura correcta
+    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='space_objects';")
+    table_exists = cur.fetchone() is not None
+    
+    if table_exists:
+        # Verificar si tiene las columnas bbox_x, bbox_y, bbox_width, bbox_height
+        cur.execute("PRAGMA table_info(space_objects);")
+        columns = [row[1] for row in cur.fetchall()]
+        required_bbox_columns = ['bbox_x', 'bbox_y', 'bbox_width', 'bbox_height']
+        
+        # Si faltan columnas bbox, recrear la tabla
+        if not all(col in columns for col in required_bbox_columns):
+            print(f"⚠️ Old database schema detected. Recreating table with new schema...")
+            cur.execute("DROP TABLE IF EXISTS space_objects;")
+            table_exists = False
+    
+    if not table_exists:
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS space_objects (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                centroid_x REAL,
+                centroid_y REAL,
+                area REAL,
+                compactness REAL,
+                total_brightness REAL,
+                peak_brightness REAL,
+                color TEXT,
+                background_contrast REAL,
+                obj_type TEXT,
+                bbox_x REAL,
+                bbox_y REAL,
+                bbox_width REAL,
+                bbox_height REAL,
+                processing_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        print("✅ Created space_objects table with new schema")
+    
     # Índices para búsquedas por timestamp
     cur.execute("CREATE INDEX IF NOT EXISTS idx_so_timestamp ON space_objects(processing_timestamp);")
     
     # Índices para coordenadas y medidas espaciales
     cur.execute("CREATE INDEX IF NOT EXISTS idx_so_xy ON space_objects(centroid_x, centroid_y);")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_so_area ON space_objects(area);")
-    cur.execute("CREATE INDEX IF NOT EXISTS idx_so_bbox ON space_objects(bbox_x, bbox_y, bbox_width, bbox_height);")
+    
+    # Solo crear índice bbox si las columnas existen
+    try:
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_so_bbox ON space_objects(bbox_x, bbox_y, bbox_width, bbox_height);")
+    except sqlite3.OperationalError as e:
+        print(f"⚠️ Could not create bbox index: {e}")
+    
     cur.execute("CREATE INDEX IF NOT EXISTS idx_so_compactness ON space_objects(compactness);")
     
     # Índices para propiedades de brillo
