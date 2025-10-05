@@ -6,6 +6,8 @@ import ImageUploader, { TilesData } from '@/components/ImageUploader';
 import QueryBox from '@/components/QueryBox';
 import Toolbox from '@/components/Toolbox';
 import BoundingBoxOverlay from '@/components/BoundingBoxOverlay';
+import ChatPanel, { ChatMessage } from '@/components/ChatPanel';
+import FloatingImageViewer from '@/components/FloatingImageViewer';
 import { AndromedaViewerRef } from '@/components/AndromedaViewerTiled';
 import { DynamicViewerRef } from '@/components/DynamicImageViewer';
 
@@ -40,11 +42,16 @@ export default function Home() {
   const [detectionResult, setDetectionResult] = useState<any>(null);
   const [showBoundingBoxes, setShowBoundingBoxes] = useState(false);
 
+  // Chat state
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
+  // Floating image viewer state
+  const [floatingImages, setFloatingImages] = useState<string[] | null>(null);
+
   // Referencias para capturar screenshots
   const andromedaViewerRef = useRef<AndromedaViewerRef>(null);
-  const dynamicViewerRef = useRef<DynamicViewerRef>(null);
-
-  // Función para limpiar bounding boxes
+  const dynamicViewerRef = useRef<DynamicViewerRef>(null);  // Función para limpiar bounding boxes
   const clearBoundingBoxes = () => {
     setDetectionResult(null);
     setShowBoundingBoxes(false);
@@ -90,7 +97,10 @@ export default function Home() {
   };
 
   const handleQuery = async (query: string, attachedImages?: File[]) => {
+    if (!query.trim() && (!attachedImages || attachedImages.length === 0)) return;
+
     setIsQueryLoading(true);
+    const startTime = Date.now();
 
     let images: string[] = [];
     if (attachedImages && attachedImages.length > 0) {
@@ -108,20 +118,69 @@ export default function Home() {
       );
     }
 
-    try {
+    // Add user message to chat
+    const userMessage: ChatMessage = {
+      id: `user-${Date.now()}`,
+      type: 'user',
+      content: query || '🖼️ Image query',
+      timestamp: new Date(),
+      images: images.length > 0 ? images : undefined,
+    };
+    setChatMessages(prev => [...prev, userMessage]);
+
+    // Show floating images if there are images attached
+    if (images.length > 0) {
+      setFloatingImages(images); // Show all images
+    }
+
+    // Open chat panel if not already open
+    if (!isChatOpen) {
+      setIsChatOpen(true);
+    } try {
       const response = await fetch('http://localhost:8000/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: query, images }),
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
-      alert('Respuesta de la API: ' + data.response);
+      const processingTime = Date.now() - startTime;
+
+      // Add assistant response to chat
+      const assistantMessage: ChatMessage = {
+        id: `assistant-${Date.now()}`,
+        type: 'assistant',
+        content: data.response || 'No response received',
+        timestamp: new Date(),
+        metadata: {
+          processingTime,
+          detections: data.detections || 0,
+        },
+      };
+      setChatMessages(prev => [...prev, assistantMessage]);
+
     } catch (error) {
       console.error('Error sending query:', error);
-      alert('Error al enviar la consulta');
+
+      // Add error message to chat
+      const errorMessage: ChatMessage = {
+        id: `error-${Date.now()}`,
+        type: 'system',
+        content: `❌ Error: ${error instanceof Error ? error.message : 'Failed to send query'}`,
+        timestamp: new Date(),
+      };
+      setChatMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsQueryLoading(false);
     }
+  };
+
+  const handleClearChat = () => {
+    setChatMessages([]);
   };
 
   return (
@@ -134,7 +193,7 @@ export default function Home() {
               NASA
             </div>
             <div className="h-5 sm:h-6 w-px bg-cyan-500/50"></div>
-            <h1 className="text-white font-mono text-sm sm:text-base tracking-wide">
+            <h1 className="text-cyan-400 font-mono text-sm sm:text-base tracking-wide">
               {customImage ? 'CUSTOM EXPLORER' : 'ANDROMEDA'}
             </h1>
           </div>
@@ -194,6 +253,21 @@ export default function Home() {
           isScreenshotBased={true}
         />
       )}
+
+      {/* Chat Panel */}
+      <ChatPanel
+        messages={chatMessages}
+        isLoading={isQueryLoading}
+        onClear={handleClearChat}
+        isOpen={isChatOpen}
+        onToggle={() => setIsChatOpen(!isChatOpen)}
+      />
+
+      {/* Floating Image Viewer */}
+      <FloatingImageViewer
+        images={floatingImages}
+        onClose={() => setFloatingImages(null)}
+      />
 
       {/* Query Box - Compacto */}
       <div className="absolute bottom-10 left-4 right-4 z-[1000]">

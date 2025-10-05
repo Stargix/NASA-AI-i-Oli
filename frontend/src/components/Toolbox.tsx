@@ -18,6 +18,28 @@ export default function Toolbox({ onResult, onCaptureView }: Props) {
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<any>(null);
 
+  // Notificar cambio de modo globalmente
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).toolboxMode = mode;
+      window.dispatchEvent(new CustomEvent('toolboxModeChange', { detail: { mode } }));
+    }
+  }, [mode]);
+
+  // Escuchar solicitud del chat para cambiar a modo auto
+  useEffect(() => {
+    const handleChatRequestAutoMode = () => {
+      if (mode === 'manual') {
+        setMode('auto');
+      }
+    };
+
+    window.addEventListener('chatRequestAutoMode', handleChatRequestAutoMode);
+    return () => {
+      window.removeEventListener('chatRequestAutoMode', handleChatRequestAutoMode);
+    };
+  }, [mode]);
+
   // Estado para la detección automática en background
   const [cachedResult, setCachedResult] = useState<any>(null);
   const [isAutoDetecting, setIsAutoDetecting] = useState(false);
