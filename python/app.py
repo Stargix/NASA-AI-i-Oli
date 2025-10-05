@@ -87,9 +87,38 @@ async def chat_endpoint(data: schema.ChatMessageSchema):
 
 @app.post("/similarity", response_model=schema.SimilarityResponseSchema)
 async def similarity_endpoint(data: schema.SimilarityRequestSchema):
+    # Handle pattern image (image_path1)
+    pattern_path = data.image_path1
+    tmp_pattern = None
+    if pattern_path.startswith("data:image"):
+        tmp_pattern = save_temp_image_from_data_url(pattern_path)
+        pattern_path = tmp_pattern
+    elif pattern_path.startswith("http://") or pattern_path.startswith("https://"):
+        tmp_pattern = save_temp_image_from_url(pattern_path)
+        pattern_path = tmp_pattern
+
+    # Handle target image (image_path2)
+    target_path = data.image_path2
+    tmp_target = None
+    if target_path.startswith("data:image"):
+        tmp_target = save_temp_image_from_data_url(target_path)
+        target_path = tmp_target
+    elif target_path.startswith("http://") or target_path.startswith("https://"):
+        tmp_target = save_temp_image_from_url(target_path)
+        target_path = tmp_target
+
+    # Calculate similarity
     result = get_similarity_scores(
-        image_path1=data.image_path1,
-        image_path2=data.image_path2,
+        image_path1=pattern_path,
+        image_path2=target_path,
         grid_size=data.grid_size
     )
+
+    # Clean up temp files
+    import os
+    if tmp_pattern:
+        os.unlink(tmp_pattern)
+    if tmp_target:
+        os.unlink(tmp_target)
+    
     return result

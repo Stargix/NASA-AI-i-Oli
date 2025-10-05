@@ -251,6 +251,8 @@ const AndromedaViewerTiled = forwardRef<AndromedaViewerRef, {}>((props, ref) => 
         // Función para actualizar el estado global del viewer
         const updateViewerState = () => {
             const center = map.getCenter();
+            const containerRect = containerRef.current?.getBoundingClientRect();
+            
             (window as any).andromedaViewerState = {
                 zoom: map.getZoom(),
                 centerPx: {
@@ -260,7 +262,14 @@ const AndromedaViewerTiled = forwardRef<AndromedaViewerRef, {}>((props, ref) => 
                 imageSize: {
                     width: imageWidth,
                     height: imageHeight
-                }
+                },
+                // Añadir bounds del contenedor para Similarity
+                containerBounds: containerRect ? {
+                    left: containerRect.left,
+                    top: containerRect.top,
+                    width: containerRect.width,
+                    height: containerRect.height,
+                } : null
             };
         };
 

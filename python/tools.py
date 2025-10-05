@@ -326,12 +326,40 @@ def save_temp_image_from_data_url(data_url: str) -> str:
 def get_similarity_scores(image_path1, image_path2, grid_size=10):
     """
     Devuelve un diccionario con los scores de similitud entre dos imágenes usando color, brightness y HOG.
+    Soporta rutas locales, URLs HTTP/HTTPS, y data URLs.
     """
+    def load_image(path):
+        """Helper para cargar imágenes de diferentes fuentes"""
+        if isinstance(path, str) and (path.startswith('http://') or path.startswith('https://')):
+            print(f"Downloading image from URL: {path}")
+            response = requests.get(path, timeout=10)
+            response.raise_for_status()
+            image_array = np.frombuffer(response.content, dtype=np.uint8)
+            img = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+            if img is None:
+                raise ValueError(f"Failed to decode image from URL")
+            return img
+        elif isinstance(path, str) and path.startswith('data:image'):
+            # Data URL
+            m = re.match(r'data:(image/\w+);base64,(.*)', path, re.DOTALL)
+            if not m:
+                raise ValueError('Invalid data URL')
+            b64 = m.group(2)
+            img_bytes = base64.b64decode(b64)
+            image_array = np.frombuffer(img_bytes, dtype=np.uint8)
+            img = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+            if img is None:
+                raise ValueError('Failed to decode image from data URL')
+            return img
+        else:
+            # Local file path
+            img = cv2.imread(path)
+            if img is None:
+                raise ValueError(f"Could not load image: {path}")
+            return img
 
-    img1 = cv2.imread(image_path1)
-    img2 = cv2.imread(image_path2)
-    if img1 is None or img2 is None:
-        raise ValueError("No se pudo cargar una de las imágenes.")
+    img1 = load_image(image_path1)
+    img2 = load_image(image_path2)
 
     scores_color = compare_images_grid(img1, img2, grid_size=grid_size, method_type="color")
     scores_brightness = compare_images_grid(img1, img2, grid_size=grid_size, method_type="brightness")

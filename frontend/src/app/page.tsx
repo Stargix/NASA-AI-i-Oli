@@ -6,6 +6,7 @@ import ImageUploader, { TilesData } from '@/components/ImageUploader';
 import QueryBox from '@/components/QueryBox';
 import Toolbox from '@/components/Toolbox';
 import BoundingBoxOverlay from '@/components/BoundingBoxOverlay';
+import Similarity from '@/components/Similarity';
 import { AndromedaViewerRef } from '@/components/AndromedaViewerTiled';
 import { DynamicViewerRef } from '@/components/DynamicImageViewer';
 
@@ -39,6 +40,7 @@ export default function Home() {
   const [isQueryLoading, setIsQueryLoading] = useState(false);
   const [detectionResult, setDetectionResult] = useState<any>(null);
   const [showBoundingBoxes, setShowBoundingBoxes] = useState(false);
+  const [showSimilarity, setShowSimilarity] = useState(false);
 
   // Referencias para capturar screenshots
   const andromedaViewerRef = useRef<AndromedaViewerRef>(null);
@@ -153,6 +155,14 @@ export default function Home() {
                 ANDROMEDA
               </button>
             )}
+            {!customImage && (
+              <button
+                onClick={() => setShowSimilarity(!showSimilarity)}
+                className="px-3 py-1.5 sm:px-4 sm:py-2 border border-purple-500/50 rounded text-purple-400 text-xs sm:text-sm font-mono bg-purple-500/10 hover:bg-purple-500/20 transition-all duration-300 hover:shadow-[0_0_10px_rgba(168,85,247,0.3)]"
+              >
+                SIMILARITY
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -193,6 +203,11 @@ export default function Home() {
           onClose={() => setShowBoundingBoxes(false)}
           isScreenshotBased={true}
         />
+      )}
+
+      {/* Similarity Panel */}
+      {!customImage && showSimilarity && (
+        <Similarity onClose={() => setShowSimilarity(false)} />
       )}
 
       {/* Query Box - Compacto */}
