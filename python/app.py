@@ -114,7 +114,7 @@ async def chat_endpoint(data: schema.ChatMessageSchema):
                 temperature=0.7
             )
             
-            prompt = f"""You are an expert astronomy assistant. Answer this question concisely and informatively in English.
+            prompt = f"""You are an expert astronomy assistant. Answer this question concisely and informatively in English.   
 
 Question: {data.message}
 
