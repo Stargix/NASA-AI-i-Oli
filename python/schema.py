@@ -48,3 +48,22 @@ class SimilarityRequestSchema(BaseModel):
     image_path1: str = Field(..., description="Path or URL of the first image")
     image_path2: str = Field(..., description="Path or URL of the second image")
     grid_size: int = Field(10, description="Grid size (default 10)")
+
+class ConstellationSearchRequestSchema(BaseModel):
+    constellation_name: str = Field(..., description="Name of the constellation to search for")
+    detected_centroids: Optional[List[Tuple[float, float]]] = Field(None, description="Optional list of detected star positions")
+
+class ConstellationDrawRequestSchema(BaseModel):
+    detected_centroids: Optional[List[Tuple[float, float]]] = Field(None, description="Optional list of detected star positions")
+
+class ConstellationResponseSchema(BaseModel):
+    success: bool
+    message: Optional[str] = None
+    constellation_name: Optional[str] = None
+    inliers_count: Optional[int] = None
+    total_points: Optional[int] = None
+    inliers_ratio: Optional[float] = None
+    rotation_angle: Optional[float] = None
+    scale: Optional[float] = None
+    position: Optional[Tuple[float, float]] = None
+    transformation_matrix: Optional[List[List[float]]] = None
