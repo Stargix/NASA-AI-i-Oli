@@ -101,6 +101,32 @@ async def star_analysis(data: schema.StarQuerySchema, request: Request):
 async def chat_endpoint(data: schema.ChatMessageSchema):
     tmp_path = None
     try:
+        # CHAIN 1: Question Mode - Detect if it's a question (contains '?')
+        if data.message and '?' in data.message:
+            # Direct response without using agent or database
+            from langchain_google_genai import ChatGoogleGenerativeAI
+            
+            # Configure API key explicitly
+            os.environ["GOOGLE_API_KEY"] = "AIzaSyCDpY_7pT52MOWxXTLsWDErwgp6u_3z19k"
+            
+            llm = ChatGoogleGenerativeAI(
+                model="gemini-2.0-flash-exp",
+                temperature=0.7
+            )
+            
+            prompt = f"""You are an expert astronomy assistant. Answer this question concisely and informatively in English.
+
+Question: {data.message}
+
+Provide a clear, educational answer about astronomy, space, stars, galaxies, constellations, or related topics."""
+            
+            response_text = llm.invoke(prompt).content
+            
+            return schema.ChatResponseSchema(
+                response=response_text
+            )
+        
+        # CHAIN 2: Detection Mode - Use agent for object detection
         # Process image if provided
         if data.images:
             image_data = data.images[0]
@@ -135,7 +161,7 @@ async def chat_endpoint(data: schema.ChatMessageSchema):
         if tmp_path:
             os.unlink(tmp_path)
 
-        # Format response
+        # Format response for detection mode
         if isinstance(result, dict):
             if "error" in result:
                 return schema.ChatResponseSchema(
@@ -143,9 +169,7 @@ async def chat_endpoint(data: schema.ChatMessageSchema):
                 )
             elif "bounding_box_list" in result:
                 boxes = result["bounding_box_list"]
-                response_text = (
-                    f"Message: {data.message}\n" if data.message else ""
-                ) + f"Detected {len(boxes)} objects"
+                response_text = f"Detected {len(boxes)} objects"
                 return schema.ChatResponseSchema(
                     response=response_text,
                     bounding_box_list=boxes

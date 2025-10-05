@@ -244,6 +244,7 @@ export default function Similarity({ onClose }: Props) {
       setPatternImage(event.target?.result as string);
       setResult(null);
       setError(null);
+      setShowOverlay(false); // Ocultar la matriz cuando se sube una nueva imagen
     };
     reader.readAsDataURL(file);
   }, []);
@@ -314,35 +315,6 @@ export default function Similarity({ onClose }: Props) {
           <div className="text-cyan-400 font-mono text-[10px] font-bold flex items-center gap-2">
             <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse"></div>
             MAP INTERACTION DISABLED
-          </div>
-        </div>
-      )}
-
-      {/* Pattern Loaded Floating Window */}
-      {patternImage && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[1100] w-64 bg-black/90 border border-cyan-500/30 rounded-lg shadow-[0_0_20px_rgba(6,182,212,0.2)]">
-          {/* Header */}
-          <div className="p-2.5 border-b border-cyan-500/20 flex items-center justify-between">
-            <div className="text-cyan-400 font-mono font-bold text-xs flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
-              PATTERN LOADED
-            </div>
-            <button
-              onClick={() => setPatternImage(null)}
-              className="text-cyan-400/60 hover:text-cyan-400 transition-colors"
-              title="Remove pattern"
-            >
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          
-          {/* Content */}
-          <div className="p-2.5">
-            <div className="border border-cyan-500/20 rounded overflow-hidden">
-              <img src={patternImage} alt="Pattern" className="w-full h-32 object-contain bg-black/50" />
-            </div>
           </div>
         </div>
       )}
@@ -444,7 +416,7 @@ export default function Similarity({ onClose }: Props) {
             <div className="space-y-2">
               {/* Metric Selector */}
               <div className="flex gap-1">
-                {(['color', 'brightness', 'hog'] as const).map((metric) => (
+                {(['average', 'color', 'brightness', 'hog'] as const).map((metric) => (
                   <button
                     key={metric}
                     onClick={() => setSelectedMetric(metric)}

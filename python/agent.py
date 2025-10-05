@@ -9,48 +9,50 @@ from langchain.prompts import PromptTemplate
 from agent_tools import ejecutar_sql
 
 class Agent:
-    PROMPT = """Eres un agente especializado en analizar objetos espaciales en imágenes astronómicas.
+    PROMPT = """You are a specialized agent for detecting and analyzing spatial objects in astronomical images.
 
-Base de datos (tabla 'space_objects'):
+Database (table 'space_objects'):
 - id, image_path, centroid_x, centroid_y, area, peak_brightness, total_brightness,
   compactness, background_contrast, obj_type, bbox_x, bbox_y, bbox_width, bbox_height,
   processing_timestamp
 
-Tienes acceso a las siguientes herramientas:
+You have access to the following tools:
 {tools}
 
-Usa SOLO estas herramientas por nombre: {tool_names}
+Use ONLY these tools by name: {tool_names}
 
-REGLAS GENERALES:
-1) Si el input contiene una línea 'IMAGE_PATH:', llama primero a la herramienta `ingestar_imagen`.
-2) Para análisis de imagen:
-   - Usa `ingestar_imagen` para procesar la imagen
-   - Usa `ejecutar_sql` para consultar resultados
+DETECTION MODE RULES:
+1) If the input contains an 'IMAGE_PATH:' line, first call the `ingestar_imagen` tool.
+2) For image analysis:
+   - Use `ingestar_imagen` to process the image
+   - Use `ejecutar_sql` to query results
+3) Your job is to find objects in the database that match the user's description
+4) Always use tools to query the database
 
-REGLAS SQL:
-1) Genera UNA SOLA consulta SOLO-LECTURA (SELECT/WITH) usando EXCLUSIVAMENTE la tabla `space_objects`.
-2) Para distancias usa la distancia al cuadrado (dist2), SIN sqrt ni POWER:
+SQL RULES:
+1) Generate a SINGLE READ-ONLY query (SELECT/WITH) using EXCLUSIVELY the `space_objects` table.
+2) For distances use squared distance (dist2), WITHOUT sqrt or POWER:
    ((o1.centroid_x - o2.centroid_x)*(o1.centroid_x - o2.centroid_x) +
     (o1.centroid_y - o2.centroid_y)*(o1.centroid_y - o2.centroid_y))
-3) Si mencionan "estrellas", asume obj_type='star' (si no, no filtres).
-4) Si el usuario no pide límite, añade LIMIT.
-5) Para pares de objetos:
-   - Excluye parejas con dist2 = 0 (coordenadas idénticas)
-   - No repitas objetos en distintas parejas
-   - Usa 'o1.id < o2.id' para evitar duplicados
+3) If "stars" are mentioned, assume obj_type='star' (otherwise, don't filter).
+4) If the user doesn't request a limit, add LIMIT.
+5) For object pairs:
+   - Exclude pairs with dist2 = 0 (identical coordinates)
+   - Don't repeat objects in different pairs
+   - Use 'o1.id < o2.id' to avoid duplicates
 
-FORMATO DE RESPUESTA:
-1) Para análisis SQL: devuelve EXACTAMENTE el JSON resultante.
-2) NO ejecutes consultas adicionales después de obtener el resultado.
+RESPONSE FORMAT:
+1) Always return EXACTLY the JSON result from the database query.
+2) DO NOT execute additional queries after obtaining the result.
 
-FORMATO ReAct:
+ReAct FORMAT:
 Question: {input}
-Thought: <razona si debes ingestar y qué SQL necesitas construir>
-Action: <ingestar_imagen o ejecutar_sql>
-Action Input: <argumentos de la tool; si es ejecutar_sql, pasa el SQL COMPLETO>
-Observation: <resultado JSON de la tool>
-... (repite si es necesario)
-Final Answer: <REPRODUCE EXACTAMENTE el JSON del último Observation>
+Thought: <Analyze what objects the user is looking for and construct the appropriate SQL query>
+Action: <ingestar_imagen or ejecutar_sql>
+Action Input: <tool arguments; if ejecutar_sql, pass the COMPLETE SQL>
+Observation: <JSON result from the tool>
+... (repeat if necessary)
+Final Answer: <REPRODUCE EXACTLY the JSON from the last Observation>
 
 {agent_scratchpad}
 """
@@ -63,7 +65,7 @@ Final Answer: <REPRODUCE EXACTAMENTE el JSON del último Observation>
             google_api_key (Optional[str]): The Google API key for the ChatGoogleGenerativeAI model.
         """
         # Configurar API key explícitamente
-        os.environ["GOOGLE_API_KEY"] = "AIzaSyBPQhOJLfsa_CURaAtWpJpcuINpauGPz9Q"
+        os.environ["GOOGLE_API_KEY"] = "AIzaSyCDpY_7pT52MOWxXTLsWDErwgp6u_3z19k"
         
         self.connection = connection
         # Configurar la función ejecutar_sql para usar la conexión
@@ -172,14 +174,14 @@ Final Answer: <REPRODUCE EXACTAMENTE el JSON del último Observation>
         return {"bounding_box_list": bounding_boxes}
     def run_query(self, user_query: str, image_path: Optional[str] = None) -> Dict:
         """
-        Run a query through the agent and return results.
+        Run a detection query through the agent and return results with bounding boxes.
         
         Args:
-            user_query (str): The query to process.
+            user_query (str): The detection query to process.
             image_path (Optional[str]): Path to the image to process.
             
         Returns:
-            Dict: Object details from the database.
+            Dict: Object details with bounding boxes from the database.
         """
         try:
             if image_path:
@@ -188,6 +190,7 @@ Final Answer: <REPRODUCE EXACTAMENTE el JSON del último Observation>
             res = self.executor.invoke({"input": user_query})
             result = json.loads(res["output"])
             
+            # Enrich with bounding boxes
             return self._enrich_objects(result)
                 
         except Exception as e:

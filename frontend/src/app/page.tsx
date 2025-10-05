@@ -261,20 +261,32 @@ export default function Home() {
         setDetectionResult({ bounding_box_list: data.bounding_box_list });
         setShowBoundingBoxes(true);
         setConstellationMatchedIndices(undefined);
-      }
 
-      // Add assistant response to chat
-      const assistantMessage: ChatMessage = {
-        id: `assistant-${Date.now()}`,
-        type: 'assistant',
-        content: data.response || 'No response received',
-        timestamp: new Date(),
-        metadata: {
-          processingTime,
-          detections: data.bounding_box_list?.length || 0,
-        },
-      };
-      setChatMessages(prev => [...prev, assistantMessage]);
+        // Add assistant response to chat with bounding box info
+        const assistantMessage: ChatMessage = {
+          id: `assistant-${Date.now()}`,
+          type: 'assistant',
+          content: data.response || 'No response received',
+          timestamp: new Date(),
+          metadata: {
+            processingTime,
+            detections: data.bounding_box_list.length,
+          },
+        };
+        setChatMessages(prev => [...prev, assistantMessage]);
+      } else {
+        // Text response without bounding boxes
+        const assistantMessage: ChatMessage = {
+          id: `assistant-${Date.now()}`,
+          type: 'assistant',
+          content: data.response || 'No response received',
+          timestamp: new Date(),
+          metadata: {
+            processingTime,
+          },
+        };
+        setChatMessages(prev => [...prev, assistantMessage]);
+      }
 
     } catch (error) {
       console.error('Error sending query:', error);
