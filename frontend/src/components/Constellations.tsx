@@ -190,14 +190,18 @@ export default function Constellations({ onClose, detectedCentroids, onConstella
           {loading ? '⟳ SEARCHING...' : '🔍 SEARCH'}
         </button>
 
-        {/* Draw Your Own Button */}
-        <button
-          onClick={handleDrawOwn}
-          disabled={loading}
-          className="w-full py-2 bg-purple-500/20 border border-purple-500/50 rounded text-purple-400 text-[11px] font-mono hover:bg-purple-500/30 transition-all disabled:opacity-50 font-bold"
-        >
-          {loading ? '⟳ PROCESSING...' : '✏️ DRAW YOUR OWN'}
-        </button>
+        {/* Draw Your Own Button - Disabled for server version */}
+        <div className="relative group">
+          <button
+            disabled={true}
+            className="w-full py-2 bg-purple-500/10 border border-purple-500/20 rounded text-purple-400/40 text-[11px] font-mono transition-all opacity-50 font-bold cursor-not-allowed"
+          >
+            ✏️ DRAW YOUR OWN
+          </button>
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-48 p-2 bg-black/95 border border-purple-500/50 rounded text-[9px] text-purple-300 font-mono text-center shadow-lg z-50">
+            🚫 Feature disabled in server version
+          </div>
+        </div>
 
         {/* Error */}
         {error && (
