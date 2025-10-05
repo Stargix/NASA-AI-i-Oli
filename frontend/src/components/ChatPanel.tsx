@@ -40,36 +40,11 @@ export default function ChatPanel({
         }
     }, [messages, isOpen]);
 
-    // Escuchar cambios de modo del Toolbox y minimizar si está en manual
-    useEffect(() => {
-        const handleModeChange = (event: CustomEvent) => {
-            const mode = event.detail?.mode;
-            if (mode === 'manual' && isOpen && !isExpanded) {
-                // Minimizar el chat cuando el toolbox está en modo manual
-                onToggle();
-            }
-        };
-
-        window.addEventListener('toolboxModeChange' as any, handleModeChange as any);
-        return () => {
-            window.removeEventListener('toolboxModeChange' as any, handleModeChange as any);
-        };
-    }, [isOpen, isExpanded, onToggle]);
-
     const handleClearClick = () => {
         if (onClear) {
             onClear();
             setShowClearConfirm(false);
         }
-    };
-
-    const handleToggle = () => {
-        // Si el chat se está abriendo y el toolbox está en modo manual, cambiar a auto
-        if (!isOpen && typeof window !== 'undefined' && (window as any).toolboxMode === 'manual') {
-            // Disparar evento para cambiar el toolbox a modo auto
-            window.dispatchEvent(new CustomEvent('chatRequestAutoMode'));
-        }
-        onToggle();
     };
 
     return (
@@ -85,33 +60,31 @@ export default function ChatPanel({
             {/* Toggle Button */}
             {!isExpanded && (
                 <button
-                    onClick={handleToggle}
+                    onClick={onToggle}
                     className={`
-            fixed right-4 bottom-[82px] z-[1001]
-            p-2.5 rounded-lg border transition-all duration-300
-            ${isOpen
-                            ? 'bg-cyan-500/20 border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.4)]'
-                            : 'bg-black/80 border-cyan-500/30 hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(6,182,212,0.3)]'
-                        }
-            backdrop-blur-md
+            fixed right-4 top-[238px] z-[1001]
+            p-3 rounded border transition-all duration-300
+            bg-black/80 backdrop-blur-md border-cyan-500/30 text-cyan-400 
+            hover:bg-cyan-500/20 hover:border-cyan-400
+            ${isOpen ? 'bg-cyan-500/20 border-cyan-400' : ''}
           `}
                     title={isOpen ? 'Close chat' : 'Open chat history'}
                 >
                     <svg
-                        className="w-4 h-4 text-cyan-400"
+                        className="w-4 h-4"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
+                        strokeWidth={2}
                     >
                         <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
-                            strokeWidth={2}
                             d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
                         />
                     </svg>
                     {messages.length > 0 && (
-                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-cyan-400 text-black text-[9px] font-bold rounded-full flex items-center justify-center">
+                        <span className="absolute -top-1 -right-1 w-5 h-5 bg-cyan-400 text-black text-[10px] font-bold rounded-full flex items-center justify-center">
                             {messages.length}
                         </span>
                     )}
@@ -129,7 +102,7 @@ export default function ChatPanel({
           flex flex-col
           ${isExpanded
                         ? 'left-1/2 top-[calc(50%-20px)] -translate-x-1/2 -translate-y-1/2 w-[800px] h-[calc(100vh-260px)] max-w-[90vw] max-h-[600px]'
-                        : 'right-4 bottom-[130px] w-64 max-w-[calc(100vw-2rem)] h-[calc(100vh-300px)] max-h-[405px]'
+                        : 'right-4 top-[288px] w-80 max-w-[calc(100vw-2rem)] h-[480px] max-h-[calc(100vh-320px)]'
                     }
           ${isOpen
                         ? 'opacity-100 scale-100'
