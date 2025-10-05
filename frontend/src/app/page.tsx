@@ -299,8 +299,8 @@ export default function Home() {
   return (
     <div className="relative w-full h-screen overflow-hidden bg-black">
       {/* Header cyber NASA - Responsive */}
-      <header className="absolute top-0 left-0 right-0 z-[1000] bg-gradient-to-b from-black/90 via-black/70 to-transparent backdrop-blur-sm border-b border-cyan-500/30">
-        <div className="flex items-center justify-between px-4 sm:px-6 py-2.5 sm:py-3">
+      <header className="absolute top-0 left-0 right-0 z-[1000] h-[70px] bg-gradient-to-b from-black/90 via-black/70 to-transparent backdrop-blur-sm border-b border-cyan-500/30">
+        <div className="flex items-center justify-between h-full px-4 sm:px-6">
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="text-cyan-400 font-bold text-lg sm:text-xl tracking-wider font-mono">
               NASA
@@ -325,28 +325,24 @@ export default function Home() {
                 ANDROMEDA
               </button>
             )}
-            {!customImage && (
-              <>
-                <button
-                  onClick={() => {
-                    setShowSimilarity(!showSimilarity);
-                    if (!showSimilarity) setShowConstellations(false); // Cierra Constellations al abrir Similarity
-                  }}
-                  className="px-3 py-1.5 sm:px-4 sm:py-2 border border-cyan-500/50 rounded text-cyan-400 text-xs sm:text-sm font-mono bg-cyan-500/10 hover:bg-cyan-500/20 transition-all duration-300 hover:shadow-[0_0_10px_rgba(6,182,212,0.3)]"
-                >
-                  SIMILARITY
-                </button>
-                <button
-                  onClick={() => {
-                    setShowConstellations(!showConstellations);
-                    if (!showConstellations) setShowSimilarity(false); // Cierra Similarity al abrir Constellations
-                  }}
-                  className="px-3 py-1.5 sm:px-4 sm:py-2 border border-cyan-500/50 rounded text-cyan-400 text-xs sm:text-sm font-mono bg-cyan-500/10 hover:bg-cyan-500/20 transition-all duration-300 hover:shadow-[0_0_10px_rgba(6,182,212,0.3)]"
-                >
-                  CONSTELLATIONS
-                </button>
-              </>
-            )}
+            <button
+              onClick={() => {
+                setShowSimilarity(!showSimilarity);
+                if (!showSimilarity) setShowConstellations(false); // Cierra Constellations al abrir Similarity
+              }}
+              className="px-3 py-1.5 sm:px-4 sm:py-2 border border-cyan-500/50 rounded text-cyan-400 text-xs sm:text-sm font-mono bg-cyan-500/10 hover:bg-cyan-500/20 transition-all duration-300 hover:shadow-[0_0_10px_rgba(6,182,212,0.3)]"
+            >
+              SIMILARITY
+            </button>
+            <button
+              onClick={() => {
+                setShowConstellations(!showConstellations);
+                if (!showConstellations) setShowSimilarity(false); // Cierra Similarity al abrir Constellations
+              }}
+              className="px-3 py-1.5 sm:px-4 sm:py-2 border border-cyan-500/50 rounded text-cyan-400 text-xs sm:text-sm font-mono bg-cyan-500/10 hover:bg-cyan-500/20 transition-all duration-300 hover:shadow-[0_0_10px_rgba(6,182,212,0.3)]"
+            >
+              CONSTELLATIONS
+            </button>
           </div>
         </div>
       </header>
@@ -359,17 +355,17 @@ export default function Home() {
       )}
 
       {/* Toolbox para detección de estrellas */}
-      {!customImage && (
-        <Toolbox
-          onResult={handleDetectionResult}
-          onCaptureView={async () => {
-            if (andromedaViewerRef.current) {
-              return await andromedaViewerRef.current.captureCurrentView();
-            }
-            return '';
-          }}
-        />
-      )}
+      <Toolbox
+        onResult={handleDetectionResult}
+        onCaptureView={async () => {
+          if (customImage && dynamicViewerRef.current) {
+            return await dynamicViewerRef.current.captureCurrentView();
+          } else if (andromedaViewerRef.current) {
+            return await andromedaViewerRef.current.captureCurrentView();
+          }
+          return '';
+        }}
+      />
 
       {/* Uploader modal */}
       {showUploader && (
@@ -380,7 +376,7 @@ export default function Home() {
       )}
 
       {/* Bounding Box Overlay */}
-      {!customImage && detectionResult && detectionResult.bounding_box_list && (
+      {detectionResult && detectionResult.bounding_box_list && (
         <BoundingBoxOverlay
           boxes={detectionResult.bounding_box_list}
           visible={showBoundingBoxes}
@@ -394,12 +390,12 @@ export default function Home() {
       )}
 
       {/* Similarity Panel */}
-      {!customImage && showSimilarity && (
+      {showSimilarity && (
         <Similarity onClose={() => setShowSimilarity(false)} />
       )}
 
       {/* Constellations Panel */}
-      {!customImage && showConstellations && (
+      {showConstellations && (
         <Constellations
           onClose={() => setShowConstellations(false)}
           detectedCentroids={
