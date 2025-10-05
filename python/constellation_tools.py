@@ -141,9 +141,16 @@ class ConstellationMatcher:
     
     def _find_processed_image(self, image_index: int) -> Optional[str]:
         """Find the processed image path for a given image index."""
+        # Try _filtered.png first (new format)
+        filtered_path = self.processed_dir / f"image{image_index}_filtered.png"
+        if filtered_path.exists():
+            return str(filtered_path)
+        
+        # Fallback to _circles.png (old format)
         circles_path = self.processed_dir / f"image{image_index}_circles.png"
         if circles_path.exists():
             return str(circles_path)
+        
         return None
     
     def _extract_circles_centroids(self, image: np.ndarray) -> List[Tuple[int, int]]:

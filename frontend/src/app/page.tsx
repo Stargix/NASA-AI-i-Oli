@@ -61,6 +61,7 @@ export default function Home() {
     setDetectionResult(null);
     setShowBoundingBoxes(false);
     setConstellationMatchedIndices(undefined);
+    setFloatingImages(null); // Cerrar imagen flotante de constelación
     console.log('🧹 Bounding boxes cleared from page.tsx');
 
     // Emitir evento para que Toolbox también limpie su estado
@@ -76,6 +77,13 @@ export default function Home() {
     if (matchResult.success && matchResult.matched_indices) {
       setConstellationMatchedIndices(matchResult.matched_indices);
       setShowBoundingBoxes(true);
+
+      // Mostrar imagen de la constelación en el FloatingImageViewer
+      if (matchResult.constellation_index !== undefined && matchResult.constellation_index !== null) {
+        const constellationImageUrl = `/constellations/image${matchResult.constellation_index}_filtered.png`;
+        console.log('🖼️ Loading constellation image:', constellationImageUrl);
+        setFloatingImages([constellationImageUrl]);
+      }
     }
   };
 

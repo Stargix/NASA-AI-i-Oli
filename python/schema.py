@@ -60,6 +60,7 @@ class ConstellationResponseSchema(BaseModel):
     success: bool
     message: Optional[str] = None
     constellation_name: Optional[str] = None
+    constellation_index: Optional[int] = Field(None, description="Index of the constellation for retrieving images")
     inliers_count: Optional[int] = None
     total_points: Optional[int] = None
     inliers_ratio: Optional[float] = None

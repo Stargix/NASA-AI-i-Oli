@@ -212,6 +212,11 @@ export default function Constellations({ onClose, detectedCentroids, onConstella
               {result.success ? (
                 <>
                   <div className="text-green-400 font-bold mb-2">✓ Match Found!</div>
+                  {result.constellation_index !== undefined && result.constellation_index !== null && (
+                    <div className="p-1.5 mb-2 bg-yellow-500/10 border border-yellow-500/30 rounded text-[8px] text-yellow-400">
+                      🎨🖼️ Your drawing and constellation displayed in top-right corner
+                    </div>
+                  )}
                   {result.constellation_name && (
                     <div className="flex justify-between mb-1">
                       <span>Name:</span>
