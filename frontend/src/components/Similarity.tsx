@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 interface SimilarityScores {
   color: number[][];
@@ -25,31 +25,176 @@ export default function Similarity({ onClose }: Props) {
   const [result, setResult] = useState<SimilarityResult | null>(null);
   const [selectedMetric, setSelectedMetric] = useState<'average' | 'color' | 'brightness' | 'hog'>('average');
   const [error, setError] = useState<string | null>(null);
-  const [showOverlay, setShowOverlay] = useState(true);
-  const [viewerState, setViewerState] = useState<any>(null);
+  const [showOverlay, setShowOverlay] = useState(false);
+  const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Sincronizar con el estado del viewer (igual que BoundingBoxOverlay)
+  // Bloquear/desbloquear el viewer cuando se muestra/oculta la matriz
   useEffect(() => {
-    // Actualizar el estado del viewer cada 100ms
-    const interval = setInterval(() => {
-      if (typeof window !== 'undefined' && (window as any).andromedaViewerState) {
-        setViewerState((window as any).andromedaViewerState);
+    if (typeof window === 'undefined') return;
+
+    const handleToggleMapInteraction = (disable: boolean) => {
+      const mapContainer = document.querySelector('.leaflet-container');
+      if (mapContainer) {
+        if (disable) {
+          (mapContainer as HTMLElement).style.pointerEvents = 'none';
+          console.log('🔒 Map interaction disabled');
+        } else {
+          (mapContainer as HTMLElement).style.pointerEvents = 'auto';
+          console.log('🔓 Map interaction enabled');
+        }
       }
-    }, 100);
+    };
 
-    return () => clearInterval(interval);
-  }, []);
+    handleToggleMapInteraction(showOverlay);
 
-  // Debug logs
+    return () => {
+      // Asegurar que se desbloquea al desmontar
+      handleToggleMapInteraction(false);
+    };
+  }, [showOverlay]);
+
+  // Dibujar la matriz de similitud en el canvas cuando cambie el resultado o la métrica
   useEffect(() => {
-    console.log('🎯 Similarity Grid render check:', {
-      hasResult: !!result,
-      showOverlay,
-      hasViewerState: !!viewerState,
-      gridSize,
-      viewerState
+    if (!result || !showOverlay || !overlayCanvasRef.current) return;
+
+    const canvas = overlayCanvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Obtener las dimensiones del viewport
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    // Configurar el canvas con las dimensiones del viewport
+    canvas.width = viewportWidth;
+    canvas.height = viewportHeight;
+
+    // Limpiar el canvas
+    ctx.clearRect(0, 0, viewportWidth, viewportHeight);
+
+    // Buscar el contenedor de Leaflet
+    const mapContainer = document.querySelector('.leaflet-container') as HTMLElement;
+    if (!mapContainer) {
+      console.warn('⚠️ Map container not available');
+      return;
+    }
+
+    // Obtener las dimensiones y posición del contenedor del mapa
+    const mapRect = mapContainer.getBoundingClientRect();
+    
+    // Buscar la capa de imagen dentro del contenedor (leaflet-image-layer)
+    const imageLayer = mapContainer.querySelector('.leaflet-image-layer') as HTMLImageElement;
+    
+    let imageLeft = 0;
+    let imageTop = 0;
+    let imageScreenWidth = viewportWidth;
+    let imageScreenHeight = viewportHeight;
+
+    if (imageLayer) {
+      // Si encontramos la capa de imagen, usar sus dimensiones y posición
+      const imageRect = imageLayer.getBoundingClientRect();
+      imageLeft = imageRect.left;
+      imageTop = imageRect.top;
+      imageScreenWidth = imageRect.width;
+      imageScreenHeight = imageRect.height;
+      
+      console.log('🎨 Using image layer bounds:', {
+        imageLeft,
+        imageTop,
+        imageScreenWidth,
+        imageScreenHeight
+      });
+    } else {
+      // Si no encontramos la imagen específica, usar todo el contenedor del mapa
+      imageLeft = mapRect.left;
+      imageTop = mapRect.top;
+      imageScreenWidth = mapRect.width;
+      imageScreenHeight = mapRect.height;
+      
+      console.log('🎨 Using map container bounds:', {
+        imageLeft,
+        imageTop,
+        imageScreenWidth,
+        imageScreenHeight
+      });
+    }
+
+    console.log('🎨 Drawing similarity matrix:', {
+      viewportWidth,
+      viewportHeight,
+      imageLeft,
+      imageTop,
+      imageScreenWidth,
+      imageScreenHeight,
+      gridSize: result.grid_size
     });
-  }, [result, showOverlay, viewerState, gridSize]);
+
+    // Dibujar la matriz de similitud
+    const scores = result.scores[selectedMetric];
+    const cellWidth = imageScreenWidth / result.grid_size;
+    const cellHeight = imageScreenHeight / result.grid_size;
+
+    for (let row = 0; row < result.grid_size; row++) {
+      for (let col = 0; col < result.grid_size; col++) {
+        const score = scores[row][col];
+        
+        // Convertir el score (0-1) a un color del espectro azul -> verde -> rojo
+        const color = scoreToColor(score);
+        
+        // Posición de la celda en la pantalla
+        const x = imageLeft + col * cellWidth;
+        const y = imageTop + row * cellHeight;
+
+        // Dibujar la celda con transparencia
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, cellWidth, cellHeight);
+
+        // Dibujar el borde de la celda
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x, y, cellWidth, cellHeight);
+      }
+    }
+  }, [result, selectedMetric, showOverlay]);
+
+  // Función para convertir score a color (azul -> cian -> verde -> amarillo -> rojo)
+  const scoreToColor = (score: number): string => {
+    // Asegurar que el score está entre 0 y 1
+    const clampedScore = Math.max(0, Math.min(1, score));
+    
+    // Transparencia base
+    const alpha = 0.6;
+    
+    if (clampedScore < 0.25) {
+      // Azul (0) -> Cian (0.25)
+      const t = clampedScore / 0.25;
+      const r = 0;
+      const g = Math.round(255 * t);
+      const b = 255;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    } else if (clampedScore < 0.5) {
+      // Cian (0.25) -> Verde (0.5)
+      const t = (clampedScore - 0.25) / 0.25;
+      const r = 0;
+      const g = 255;
+      const b = Math.round(255 * (1 - t));
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    } else if (clampedScore < 0.75) {
+      // Verde (0.5) -> Amarillo (0.75)
+      const t = (clampedScore - 0.5) / 0.25;
+      const r = Math.round(255 * t);
+      const g = 255;
+      const b = 0;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    } else {
+      // Amarillo (0.75) -> Rojo (1.0)
+      const t = (clampedScore - 0.75) / 0.25;
+      const r = 255;
+      const g = Math.round(255 * (1 - t));
+      const b = 0;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+  };
 
   const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -72,20 +217,17 @@ export default function Similarity({ onClose }: Props) {
 
     setLoading(true);
     setError(null);
+    setShowOverlay(false); // Ocultar overlay anterior si existe
 
     try {
-      // Get current viewer center to use as target area
-      const viewerState = (window as any).andromedaViewerState;
-      const targetImageUrl = viewerState 
-        ? `${window.location.origin}/andromeda.jpg`
-        : `${window.location.origin}/andromeda.jpg`;
+      const targetImageUrl = `${window.location.origin}/andromeda.jpg`;
 
       const response = await fetch('http://localhost:8000/similarity', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          image_path1: patternImage, // Pattern (uploaded by user)
-          image_path2: targetImageUrl, // Target (Andromeda image)
+          image_path1: patternImage,
+          image_path2: targetImageUrl,
           grid_size: gridSize,
         }),
       });
@@ -94,6 +236,7 @@ export default function Similarity({ onClose }: Props) {
 
       const data: SimilarityResult = await response.json();
       setResult(data);
+      setShowOverlay(true); // Mostrar la matriz sobre la imagen
       console.log('Similarity result:', data);
     } catch (err) {
       console.error('Similarity calculation error:', err);
@@ -103,31 +246,54 @@ export default function Similarity({ onClose }: Props) {
     }
   };
 
-  const getHeatmapColor = (value: number) => {
-    // value from 0 to 1, convert to color gradient (blue -> cyan -> green -> yellow -> red)
-    const clampedValue = Math.max(0, Math.min(1, value));
-    
-    if (clampedValue < 0.25) {
-      // Blue to Cyan
-      const t = clampedValue / 0.25;
-      return `rgb(0, ${Math.round(t * 255)}, 255)`;
-    } else if (clampedValue < 0.5) {
-      // Cyan to Green
-      const t = (clampedValue - 0.25) / 0.25;
-      return `rgb(0, 255, ${Math.round(255 - t * 255)})`;
-    } else if (clampedValue < 0.75) {
-      // Green to Yellow
-      const t = (clampedValue - 0.5) / 0.25;
-      return `rgb(${Math.round(t * 255)}, 255, 0)`;
-    } else {
-      // Yellow to Red
-      const t = (clampedValue - 0.75) / 0.25;
-      return `rgb(255, ${Math.round(255 - t * 255)}, 0)`;
+  const handleCloseOverlay = () => {
+    setShowOverlay(false);
+  };
+
+  const handleClose = () => {
+    setShowOverlay(false);
+    if (onClose) {
+      onClose();
     }
   };
 
   return (
     <>
+      {/* Canvas Overlay para la matriz de similitud */}
+      {showOverlay && (
+        <div className="fixed inset-0 z-[1000] pointer-events-none">
+          <canvas 
+            ref={overlayCanvasRef}
+            className="w-full h-full"
+          />
+        </div>
+      )}
+
+      {/* Botón para cerrar la matriz cuando está visible */}
+      {showOverlay && (
+        <div className="fixed top-4 right-4 z-[1200]">
+          <button
+            onClick={handleCloseOverlay}
+            className="px-4 py-2 bg-red-500/80 hover:bg-red-500 border border-red-400 rounded-lg text-white font-mono text-sm font-bold shadow-lg transition-all flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            HIDE MATRIX
+          </button>
+        </div>
+      )}
+
+      {/* Aviso cuando la matriz está visible */}
+      {showOverlay && (
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-[1200] bg-purple-500/90 border border-purple-400 rounded-lg px-4 py-2 shadow-lg">
+          <div className="text-white font-mono text-xs font-bold flex items-center gap-2">
+            <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+            🔒 Map interaction disabled - Close matrix to re-enable
+          </div>
+        </div>
+      )}
+
       {/* Control Panel */}
       <div className="absolute top-[520px] left-4 z-[1100] w-64 bg-black/90 border border-cyan-500/30 rounded-lg shadow-[0_0_20px_rgba(6,182,212,0.2)]">
         {/* Header */}
@@ -138,7 +304,7 @@ export default function Similarity({ onClose }: Props) {
         </div>
         {onClose && (
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="text-cyan-400/60 hover:text-cyan-400 transition-colors"
           >
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -200,6 +366,20 @@ export default function Similarity({ onClose }: Props) {
           {loading ? '⟳ CALCULATING...' : '▶ CALCULATE'}
         </button>
 
+        {/* Show/Hide Matrix Button (solo cuando hay resultado) */}
+        {result && (
+          <button
+            onClick={() => setShowOverlay(!showOverlay)}
+            className={`w-full py-2 border rounded text-[11px] font-mono transition-all font-bold ${
+              showOverlay
+                ? 'bg-red-500/20 border-red-500/50 text-red-400 hover:bg-red-500/30'
+                : 'bg-green-500/20 border-green-500/50 text-green-400 hover:bg-green-500/30'
+            }`}
+          >
+            {showOverlay ? '👁️ HIDE MATRIX' : '👁️ SHOW MATRIX'}
+          </button>
+        )}
+
         {/* Error */}
         {error && (
           <div className="p-2 bg-red-500/10 border border-red-500/30 rounded text-[10px] text-red-400 font-mono">
@@ -210,21 +390,6 @@ export default function Similarity({ onClose }: Props) {
         {/* Results */}
         {result && (
           <div className="space-y-2">
-            {/* Overlay Toggle */}
-            <div className="flex items-center justify-between p-1.5 bg-black/40 border border-purple-500/20 rounded">
-              <span className="text-purple-400/70 text-[9px] font-mono">Show Grid Overlay</span>
-              <button
-                onClick={() => setShowOverlay(!showOverlay)}
-                className={`px-2 py-0.5 rounded text-[8px] font-mono transition-all ${
-                  showOverlay
-                    ? 'bg-purple-500/30 border border-purple-500/60 text-purple-300'
-                    : 'bg-black/40 border border-purple-500/20 text-purple-400/60'
-                }`}
-              >
-                {showOverlay ? 'ON' : 'OFF'}
-              </button>
-            </div>
-
             {/* Metric Selector */}
             <div className="flex gap-1">
               {(['average', 'color', 'brightness', 'hog'] as const).map((metric) => (
@@ -279,83 +444,6 @@ export default function Similarity({ onClose }: Props) {
         )}
       </div>
       </div>
-
-      {/* Grid Overlay - Usa coordenadas de imagen como BoundingBoxOverlay */}
-      {result && showOverlay && viewerState && (
-        <div className="absolute inset-0 pointer-events-none z-[850]">
-          {result.scores[selectedMetric].map((row, rowIndex) =>
-            row.map((value, colIndex) => {
-              // Calcular las coordenadas de la celda en la imagen original (40000x10000)
-              const imageWidth = 40000;
-              const imageHeight = 10000;
-              
-              const cellWidth = imageWidth / result.grid_size;
-              const cellHeight = imageHeight / result.grid_size;
-              
-              // Centro de la celda en coordenadas de imagen
-              const imageCenterX = (colIndex + 0.5) * cellWidth;
-              const imageCenterY = (rowIndex + 0.5) * cellHeight;
-              
-              // Convertir coordenadas de imagen a coordenadas de pantalla (igual que BoundingBoxOverlay)
-              const zoom = viewerState.zoom;
-              const centerPx = viewerState.centerPx;
-              
-              // Calcular el factor de escala basado en el zoom
-              const scale = Math.pow(2, zoom + 4.8);
-              
-              // Calcular offset desde el centro
-              const offsetX = (imageCenterX - centerPx.x) * scale;
-              const offsetY = (imageCenterY - centerPx.y) * scale;
-              
-              // Posición en la pantalla (centro de la pantalla es el centro del viewer)
-              const screenX = window.innerWidth / 2 + offsetX;
-              const screenY = window.innerHeight / 2 + offsetY;
-              
-              // Dimensiones de la celda en pantalla
-              const screenCellWidth = cellWidth * scale;
-              const screenCellHeight = cellHeight * scale;
-              
-              // Solo renderizar si está visible en la pantalla
-              const isVisible =
-                screenX + screenCellWidth / 2 > 0 &&
-                screenX - screenCellWidth / 2 < window.innerWidth &&
-                screenY + screenCellHeight / 2 > 0 &&
-                screenY - screenCellHeight / 2 < window.innerHeight;
-              
-              if (!isVisible) return null;
-              
-              const percentage = (value * 100).toFixed(0);
-              const showText = screenCellWidth > 50 && screenCellHeight > 50;
-              const fontSize = Math.max(8, Math.min(screenCellWidth / 6, screenCellHeight / 6, 16));
-              
-              return (
-                <div
-                  key={`${rowIndex}-${colIndex}`}
-                  className="absolute pointer-events-none border border-cyan-400/20 flex items-center justify-center"
-                  style={{
-                    left: screenX - screenCellWidth / 2,
-                    top: screenY - screenCellHeight / 2,
-                    width: Math.max(screenCellWidth, 4),
-                    height: Math.max(screenCellHeight, 4),
-                    backgroundColor: `${getHeatmapColor(value)}30`,
-                    boxShadow: `0 0 5px ${getHeatmapColor(value)}40`,
-                  }}
-                  title={`Grid [${rowIndex},${colIndex}]: ${(value * 100).toFixed(1)}%`}
-                >
-                  {showText && (
-                    <span 
-                      className="text-white font-mono font-bold drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]"
-                      style={{ fontSize: `${fontSize}px` }}
-                    >
-                      {percentage}
-                    </span>
-                  )}
-                </div>
-              );
-            })
-          )}
-        </div>
-      )}
     </>
   );
 }
