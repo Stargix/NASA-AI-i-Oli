@@ -1,10 +1,15 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import html2canvas from 'html2canvas';
 
-export default function AndromedaViewerTiled() {
+export interface AndromedaViewerRef {
+    captureCurrentView: () => Promise<string>;
+}
+
+const AndromedaViewerTiled = forwardRef<AndromedaViewerRef, {}>((props, ref) => {
     const mapRef = useRef<L.Map | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [zoom, setZoom] = useState(-4.8);
@@ -13,6 +18,49 @@ export default function AndromedaViewerTiled() {
     const [tilesLoaded, setTilesLoaded] = useState(0);
     const [totalTiles, setTotalTiles] = useState(0);
     const [isZoomLoading, setIsZoomLoading] = useState(false);
+
+    // Exponer la función de captura mediante ref
+    useImperativeHandle(ref, () => ({
+        captureCurrentView: async (): Promise<string> => {
+            if (!containerRef.current) {
+                console.error('Container ref not available');
+                return '';
+            }
+
+            try {
+                console.log('Capturing Andromeda current view...');
+
+                // Capturar el contenedor del mapa
+                const canvas = await html2canvas(containerRef.current, {
+                    backgroundColor: '#000000',
+                    scale: 1, // Ajusta según necesites más o menos resolución
+                    logging: false,
+                    useCORS: true,
+                    allowTaint: true,
+                    removeContainer: false,
+                    imageTimeout: 0,
+                    // Ignorar elementos de UI que no queremos en la captura
+                    ignoreElements: (element) => {
+                        // Ignorar elementos con z-index muy alto (UI)
+                        const zIndex = window.getComputedStyle(element).zIndex;
+                        if (zIndex && parseInt(zIndex) >= 900) {
+                            return true;
+                        }
+                        return false;
+                    }
+                });
+
+                // Convertir a base64 con calidad ajustable
+                const screenshot = canvas.toDataURL('image/jpeg', 0.85);
+                console.log('Andromeda screenshot captured successfully. Size:', screenshot.length);
+
+                return screenshot;
+            } catch (error) {
+                console.error('Failed to capture Andromeda view:', error);
+                return '';
+            }
+        }
+    }));
 
     useEffect(() => {
         if (!containerRef.current || mapRef.current) return;
@@ -145,6 +193,10 @@ export default function AndromedaViewerTiled() {
         map.on('zoomstart', () => {
             setIsZoomLoading(true);
             clearTimeout(zoomLoadingTimeout);
+            // Limpiar bounding boxes cuando empiece el zoom
+            if (typeof window !== 'undefined' && (window as any).clearBoundingBoxes) {
+                (window as any).clearBoundingBoxes();
+            }
         });
 
         map.on('zoomend', () => {
@@ -165,6 +217,10 @@ export default function AndromedaViewerTiled() {
             if (!loading) {
                 setIsZoomLoading(true);
                 clearTimeout(zoomLoadingTimeout);
+            }
+            // Limpiar bounding boxes cuando empiece el arrastre
+            if (typeof window !== 'undefined' && (window as any).clearBoundingBoxes) {
+                (window as any).clearBoundingBoxes();
             }
         });
 
@@ -215,82 +271,6 @@ export default function AndromedaViewerTiled() {
         map.on('zoomend', () => {
             updateViewerState();
         });
-
-        // Función global para capturar el viewer
-        (window as any).captureAndromedaView = async () => {
-            if (!containerRef.current) {
-                console.error('Container ref not available');
-                return '';
-            }
-
-            try {
-                // Importar html2canvas dinámicamente
-                const html2canvas = (await import('html2canvas')).default;
-                
-                console.log('Capturing Andromeda current view...');
-
-                // Capturar el contenedor del mapa
-                const canvas = await html2canvas(containerRef.current, {
-                    backgroundColor: '#000000',
-                    scale: 1,
-                    logging: false,
-                    useCORS: true,
-                    allowTaint: true,
-                    removeContainer: false,
-                    imageTimeout: 0,
-                    ignoreElements: (element) => {
-                        const zIndex = window.getComputedStyle(element).zIndex;
-                        if (zIndex && parseInt(zIndex) >= 900) {
-                            return true;
-                        }
-                        return false;
-                    }
-                });
-
-                console.log('Original canvas size:', canvas.width, 'x', canvas.height);
-
-                // Guardar dimensiones originales
-                (window as any).screenshotDimensions = {
-                    originalWidth: canvas.width,
-                    originalHeight: canvas.height
-                };
-
-                // Redimensionar si es mayor a 2000x2000
-                const MAX_SIZE = 2000;
-                let finalCanvas = canvas;
-                
-                if (canvas.width > MAX_SIZE || canvas.height > MAX_SIZE) {
-                    const scale = Math.min(MAX_SIZE / canvas.width, MAX_SIZE / canvas.height);
-                    const newWidth = Math.floor(canvas.width * scale);
-                    const newHeight = Math.floor(canvas.height * scale);
-
-                    console.log(`Resizing to ${newWidth}x${newHeight} (scale: ${scale.toFixed(3)})`);
-
-                    finalCanvas = document.createElement('canvas');
-                    finalCanvas.width = newWidth;
-                    finalCanvas.height = newHeight;
-                    
-                    const ctx = finalCanvas.getContext('2d');
-                    if (ctx) {
-                        ctx.imageSmoothingEnabled = true;
-                        ctx.imageSmoothingQuality = 'high';
-                        ctx.drawImage(canvas, 0, 0, newWidth, newHeight);
-                    }
-                }
-
-                // Guardar dimensiones finales
-                (window as any).screenshotDimensions.width = finalCanvas.width;
-                (window as any).screenshotDimensions.height = finalCanvas.height;
-
-                const screenshot = finalCanvas.toDataURL('image/jpeg', 0.85);
-                console.log('Screenshot captured. Final size:', finalCanvas.width, 'x', finalCanvas.height, 'Base64 length:', screenshot.length);
-
-                return screenshot;
-            } catch (error) {
-                console.error('Failed to capture Andromeda view:', error);
-                return '';
-            }
-        };
 
         mapRef.current = map;
 
@@ -439,4 +419,8 @@ export default function AndromedaViewerTiled() {
             )}
         </div>
     );
-}
+});
+
+AndromedaViewerTiled.displayName = 'AndromedaViewerTiled';
+
+export default AndromedaViewerTiled;

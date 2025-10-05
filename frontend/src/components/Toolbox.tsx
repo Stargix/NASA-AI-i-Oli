@@ -125,43 +125,18 @@ export default function Toolbox({ onResult, onCaptureView }: Props) {
       max_components: maxComponents,
     };
 
-    console.log('Toolbox: About to fetch /star_analysis', {
-      ...payload,
-      image: payload.image.substring(0, 100) + '...' // Solo mostrar inicio de la imagen
+    console.log('Toolbox: About to fetch /star_analysis', payload);
+    const resp = await fetch('http://localhost:8000/star_analysis', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
     });
-    
-    let resp;
-    try {
-      // Crear un timeout de 60 segundos
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000);
-      
-      resp = await fetch('http://localhost:8000/star_analysis', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
-      console.log('Toolbox: Fetch to /star_analysis completed', resp.status, resp.statusText);
-    } catch (fetchError) {
-      if ((fetchError as Error).name === 'AbortError') {
-        console.error('❌ Request timeout after 60 seconds');
-        throw new Error('Request timeout - the server is taking too long to respond');
-      }
-      console.error('❌ Fetch error:', fetchError);
-      throw new Error(`Network error: ${fetchError}`);
-    }
+    console.log('Toolbox: Fetch to /star_analysis completed', resp);
 
-    if (!resp.ok) {
-      const errorText = await resp.text();
-      console.error('❌ Server error:', resp.status, errorText);
-      throw new Error(`Server error ${resp.status}: ${errorText}`);
-    }
+    if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText}`);
 
     const data = await resp.json();
-    console.log('✅ Response data from /star_analysis received:', data);
+    console.log('Toolbox: Response data from /star_analysis', data);
     return data;
   }, [mode, gaussianBlur, noiseThreshold, adaptativeFiltering, separationThreshold, minSize, maxComponents, onCaptureView]);
 
@@ -242,49 +217,6 @@ export default function Toolbox({ onResult, onCaptureView }: Props) {
     } finally {
       setRunning(false);
     }
-  };
-
-  // Función para probar con datos de ejemplo (DEMO)
-  const runDemoDetection = () => {
-    // Obtener el centro actual del visor para colocar los objetos demo ahí
-    const viewerState = (window as any).andromedaViewerState;
-    const centerX = viewerState?.centerPx?.x || 20000; // Centro por defecto de la imagen
-    const centerY = viewerState?.centerPx?.y || 5000;
-
-    // Generar objetos demo alrededor del centro visible
-    const demoData = {
-      bounding_box_list: [
-        // Estrellas cerca del centro
-        { center: [centerX - 200, centerY - 100], height: 50, width: 50, color: 'blue', obj_type: 'star' },
-        { center: [centerX + 150, centerY - 50], height: 80, width: 80, color: 'blue', obj_type: 'star' },
-        { center: [centerX - 100, centerY + 150], height: 60, width: 60, color: 'red', obj_type: 'star' },
-        { center: [centerX + 200, centerY + 100], height: 70, width: 70, color: 'blue', obj_type: 'star' },
-
-        // Galaxias
-        { center: [centerX - 300, centerY], height: 100, width: 80, color: 'red', obj_type: 'galaxy' },
-        { center: [centerX + 250, centerY - 200], height: 120, width: 90, color: 'red', obj_type: 'galaxy' },
-        { center: [centerX, centerY + 250], height: 110, width: 85, color: 'blue', obj_type: 'galaxy' },
-
-        // Clusters más grandes
-        { center: [centerX - 400, centerY - 300], height: 200, width: 180, color: 'red', obj_type: 'cluster' },
-        { center: [centerX + 350, centerY + 200], height: 250, width: 220, color: 'blue', obj_type: 'cluster' },
-        { center: [centerX, centerY - 350], height: 180, width: 160, color: 'red', obj_type: 'cluster' },
-
-        // Más estrellas dispersas
-        { center: [centerX + 100, centerY], height: 55, width: 55, color: 'blue', obj_type: 'star' },
-        { center: [centerX - 150, centerY - 200], height: 65, width: 65, color: 'red', obj_type: 'star' },
-        { center: [centerX + 300, centerY - 100], height: 45, width: 45, color: 'blue', obj_type: 'star' },
-        { center: [centerX - 250, centerY + 200], height: 75, width: 75, color: 'red', obj_type: 'star' },
-
-        // Objeto en el centro exacto para referencia
-        { center: [centerX, centerY], height: 100, width: 100, color: 'blue', obj_type: 'cluster' },
-      ]
-    };
-
-    console.log('🎭 DEMO mode: Using sample data at center', { centerX, centerY });
-    setResult(demoData);
-    setCachedResult(demoData);
-    onResult?.(demoData);
   };
 
   return (
@@ -390,15 +322,16 @@ export default function Toolbox({ onResult, onCaptureView }: Props) {
                   {running ? '⟳ RUN...' : '▶ RUN'}
                 </button>
                 <button
-                  onClick={runDemoDetection}
-                  className="py-1.5 px-2.5 bg-purple-500/20 border border-purple-500/50 rounded text-purple-400 text-[11px] font-mono hover:bg-purple-500/30 transition-all"
-                  title="Load demo data"
-                >
-                  🎭
-                </button>
-                <button
-                  onClick={() => { setResult(null); setCachedResult(null); }}
+                  onClick={() => { 
+                    setResult(null); 
+                    setCachedResult(null);
+                    // Limpiar las bounding boxes globales
+                    if (typeof window !== 'undefined') {
+                      (window as any).clearBoundingBoxes?.();
+                    }
+                  }}
                   className="py-1.5 px-2.5 border border-cyan-500/20 rounded text-cyan-400 text-[11px] hover:bg-cyan-500/10 transition-all"
+                  title="Clear detections"
                 >
                   ✕
                 </button>
@@ -531,15 +464,16 @@ export default function Toolbox({ onResult, onCaptureView }: Props) {
                   {running ? '⟳ PROCESSING...' : '▶ RUN DETECTION'}
                 </button>
                 <button
-                  onClick={runDemoDetection}
-                  className="px-3 py-2 bg-purple-500/20 border border-purple-500/50 rounded text-purple-400 text-[11px] font-mono hover:bg-purple-500/30 transition-all font-bold"
-                  title="Load demo data for testing"
-                >
-                  🎭 DEMO
-                </button>
-                <button
-                  onClick={() => { setResult(null); setCachedResult(null); }}
+                  onClick={() => { 
+                    setResult(null); 
+                    setCachedResult(null);
+                    // Limpiar las bounding boxes globales
+                    if (typeof window !== 'undefined') {
+                      (window as any).clearBoundingBoxes?.();
+                    }
+                  }}
                   className="py-2 px-3 border border-cyan-500/20 rounded text-cyan-400 text-[11px] hover:bg-cyan-500/10 transition-all"
+                  title="Clear detections"
                 >
                   CLEAR
                 </button>
