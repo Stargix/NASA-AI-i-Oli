@@ -5,8 +5,6 @@ AI i Oli is an interactive platform designed to make astronomical image explorat
 Live Demo: https://nasa.stargix.dev  
 Project Demonstration:  
 https://drive.google.com/file/d/1q9fkKrcxjyFnkYLPRctmw-TdsrJDqk9r/view  
-Source Code:  
-https://github.com/Stargix/NASA-AI-i-Oli
 
 
 Challenge Overview
